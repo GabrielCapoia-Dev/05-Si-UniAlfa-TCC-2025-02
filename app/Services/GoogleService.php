@@ -69,12 +69,17 @@ class GoogleService
      */
     private function salvarTokens(User $user, SocialiteUserContract $oauthUser): void
     {
-        $user->google_token = $oauthUser->token;
-        $user->google_refresh_token = $oauthUser->refreshToken;
-        $user->google_token_expires_in = $oauthUser->expiresIn;
-        $user->save();
-    }
+        $refresh = $oauthUser->refreshToken ?? $user->google_refresh_token;
 
+        $expiresIn = $oauthUser->expiresIn ?? 3600;
+        $expiresAt = now()->addSeconds(max(60, (int) $expiresIn - 60));
+
+        $user->forceFill([
+            'google_access_token' => $oauthUser->token,
+            'google_refresh_token' => $refresh,
+            'google_token_expires_at' => $expiresAt,
+        ])->save();
+    }
     /**
      * Retorna um Google Client autenticado para o usuário.
      */

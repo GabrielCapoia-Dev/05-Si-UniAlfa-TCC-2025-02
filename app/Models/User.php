@@ -112,7 +112,6 @@ class User extends Authenticatable implements FilamentUser
         return $this->email_approved;
     }
 
-
     protected static function booted()
     {
 
@@ -131,5 +130,17 @@ class User extends Authenticatable implements FilamentUser
                 $user->email_verified_at = now();
             }
         });
+    }
+
+    public function hasGoogleOauth(): bool
+    {
+        return filled($this->google_token) || filled($this->google_refresh_token);
+    }
+
+    public function googleAccessTokenExpired(): bool
+    {
+        return is_null($this->google_token_expires_in)
+            ? true
+            : now()->greaterThan($this->google_token_expires_in);
     }
 }

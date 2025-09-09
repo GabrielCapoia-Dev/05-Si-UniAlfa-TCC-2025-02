@@ -93,11 +93,13 @@ class AdminPanelProvider extends PanelProvider
                                 'openid',
                                 'email',
                                 'profile',
-                                // só login → esses três já bastam
-                                // se quiser Drive:
-                                // 'https://www.googleapis.com/auth/drive.readonly'
+                                'https://www.googleapis.com/auth/drive.metadata.readonly',
                             ])
-                            ->with(['prompt' => 'select_account']),
+                            ->with([
+                                'prompt' => 'select_account',
+                                'access_type' => 'offline',
+                                'include_granted_scopes' => 'true',
+                            ]),
                     ])
                     ->registration(true)
                     ->createUserUsing(function (string $provider, SocialiteUserContract $oauthUser) {
