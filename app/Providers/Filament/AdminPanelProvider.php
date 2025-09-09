@@ -87,19 +87,32 @@ class AdminPanelProvider extends PanelProvider
 
                 FilamentSocialitePlugin::make()
                     ->providers([
-                        'google' => Provider::make('google')->label('Google'),
+                        'google' => Provider::make('google')
+                            ->label('Google')
+                            ->scopes([
+                                'openid',
+                                'email',
+                                'profile',
+                                // só login → esses três já bastam
+                                // se quiser Drive:
+                                // 'https://www.googleapis.com/auth/drive.readonly'
+                            ])
+                            ->with(['prompt' => 'select_account']),
                     ])
                     ->registration(true)
                     ->createUserUsing(function (string $provider, SocialiteUserContract $oauthUser) {
-                        $service = new GoogleService();
+                        $service = app(GoogleService::class);
 
                         $email = $oauthUser->getEmail();
 
+                        // verifica se o domínio do email é autorizado
                         if (!app('App\Services\DominioEmailService')->isEmailAutorizado($email)) {
-                            throw new \App\Exceptions\EmailNaoAutorizado('Email não é permitido para cadastro, entre em contato com o administrador.');
+                            throw new \App\Exceptions\EmailNaoAutorizado(
+                                'Email não é permitido para cadastro, entre em contato com o administrador.'
+                            );
                         }
 
-                        // Verifica se já existe um SocialiteUser com esse provider e provider_id
+                        // verifica se já existe um SocialiteUser vinculado a esse provider e provider_id
                         $existingSocialite = SocialiteUser::where('provider', $provider)
                             ->where('provider_id', $oauthUser->getId())
                             ->first();
@@ -107,9 +120,9 @@ class AdminPanelProvider extends PanelProvider
                         if ($existingSocialite) {
                             return $existingSocialite->user;
                         }
-                        $user = $service->registrarOuLogar($oauthUser);
 
-                        return $user;
+                        // usa a sua GoogleService para registrar ou logar
+                        return $service->registrarOuLogar($oauthUser);
                     })
             ]);
     }

@@ -33,9 +33,6 @@ class UserService
             'email_verified_at' => null,
         ]);
 
-        $user->assignRole('Acessar Painel');
-
-
         return $user;
     }
 

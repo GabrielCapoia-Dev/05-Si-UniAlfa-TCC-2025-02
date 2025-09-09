@@ -11,6 +11,7 @@
         "blade-ui-kit/blade-icons": "^1.8",
         "dutchcodingcompany/filament-socialite": "^2.4",
         "filament/filament": "3.3",
+        "google/apiclient": "2.18.3",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "rmsramos/activitylog": "^1.0",

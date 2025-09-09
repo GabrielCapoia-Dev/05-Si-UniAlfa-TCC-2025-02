@@ -5,11 +5,17 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use DutchCodingCompany\FilamentSocialite\Models\SocialiteUser;
+use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Notifications\Notification;
 use Filament\Panel;
+use Google\Service\CloudRun\Route;
+use Google\Service\FirebaseAppHosting\Redirect;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -70,21 +76,40 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(SocialiteUser::class);
     }
 
-    /**
-     * Check if the user can access the Filament panel.
-     *
-     * @param Panel $panel
-     * @return bool
-     */
-    public function canAccessPanel(Panel $panel): bool
+    public function canAccessPanel(Panel $panel, ?bool $register = false): bool
     {
-        if ($this->email_approved) {
+        if ($this->email_approved == true) {
             return true;
         }
 
-        throw new \App\Exceptions\AcessoNegadoLogin(
-            'Acesso negado. Entre em contato com o administrador.'
-        );
+        Filament::auth()->logout();
+
+        if ($register) {
+            Notification::make()
+                ->title('Cadastro Realizado')
+                ->body('Usuário cadastrado com sucesso. Solicite aprovação do administrador para acessar o painel.')
+                ->success()
+                ->send();
+        } else {
+            Notification::make()
+                ->title('Aguardando Aprovação')
+                ->body('Seu cadastro foi encaminhado para aprovação.')
+                ->icon('heroicon-o-arrow-path')
+                ->duration(10000)
+                ->warning()
+                ->send();
+        }
+
+        // Redireciona para o login do painel correto (Symfony RedirectResponse)
+        $loginRouteName = "filament.{$panel->getId()}.auth.login";
+        $loginUrl = route($loginRouteName);
+
+        throw new HttpResponseException(new RedirectResponse($loginUrl));
+    }
+
+    public function validateAccessGoogle(?string $register, ?string $login): bool
+    {
+        return $this->email_approved;
     }
 
 

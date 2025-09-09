@@ -6,17 +6,17 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Illuminate\Support\Str;
+use Google\Client as GoogleClient;
+use Illuminate\Support\Facades\DB;
 
 class GoogleService
 {
-    public function registrarOuLogar(SocialiteUserContract $oauthUser): User|null  
+    public function registrarOuLogar(SocialiteUserContract $oauthUser): User|null
     {
         if ($this->validaUser($oauthUser)) {
             return $this->loginGoogle($oauthUser);
         }
         return $this->registroGoogle($oauthUser);
-
-        return null;
     }
 
     private function validaUser(SocialiteUserContract $oauthUser): bool
@@ -24,21 +24,18 @@ class GoogleService
         $user = User::where('email', $oauthUser->getEmail())->first();
 
         if ($user && $user->email_approved) {
-
-            \Filament\Notifications\Notification::make()
-                ->title('Sucesso!')
-                ->body('Bem-vindo ao Painel.')
-                ->success()
-                ->send();
-
+            $this->salvarTokens($user, $oauthUser);
             return true;
         }
         return false;
     }
 
-    private function loginGoogle(SocialiteUserContract $oauthUser): User|null  
+    private function loginGoogle(SocialiteUserContract $oauthUser): User|null
     {
         $user = User::where('email', $oauthUser->getEmail())->first();
+
+        // Atualiza tokens no login
+        $this->salvarTokens($user, $oauthUser);
 
         \Filament\Notifications\Notification::make()
             ->title('Acesso Permitido')
@@ -51,7 +48,6 @@ class GoogleService
 
     private function registroGoogle(SocialiteUserContract $oauthUser): User
     {
-        // Cria novo usuário e vincula SocialiteUser
         $user = User::create([
             'name' => $oauthUser->getName() ?? 'Usuário Sem Nome',
             'email' => $oauthUser->getEmail(),
@@ -60,14 +56,48 @@ class GoogleService
             'email_verified_at' => null,
         ]);
 
-        $user->assignRole('Acessar Painel');
-
-        \Filament\Notifications\Notification::make()
-            ->title('Cadastro Realizado')
-            ->body('Usuário cadastrado com sucesso. Solicite aprovação do administrador para acessar o painel.')
-            ->success()
-            ->send();
+        $this->salvarTokens($user, $oauthUser);
+        DB::afterCommit(function () use ($user) {
+            $user->canAccessPanel(Filament::getPanel(), true);
+        });
 
         return $user;
+    }
+
+    /**
+     * Salva ou atualiza tokens do Google para o usuário.
+     */
+    private function salvarTokens(User $user, SocialiteUserContract $oauthUser): void
+    {
+        $user->google_token = $oauthUser->token;
+        $user->google_refresh_token = $oauthUser->refreshToken;
+        $user->google_token_expires_in = $oauthUser->expiresIn;
+        $user->save();
+    }
+
+    /**
+     * Retorna um Google Client autenticado para o usuário.
+     */
+    public function getGoogleClient(User $user): GoogleClient
+    {
+        $client = new GoogleClient();
+        $client->setClientId(config('services.google.client_id'));
+        $client->setClientSecret(config('services.google.client_secret'));
+        $client->setRedirectUri(config('services.google.redirect'));
+        $client->setAccessToken([
+            'access_token'  => $user->google_token,
+            'refresh_token' => $user->google_refresh_token,
+            'expires_in'    => $user->google_token_expires_in,
+        ]);
+
+        if ($client->isAccessTokenExpired() && $user->google_refresh_token) {
+            $newToken = $client->fetchAccessTokenWithRefreshToken($user->google_refresh_token);
+            $user->update([
+                'google_token' => $newToken['access_token'] ?? null,
+                'google_token_expires_in' => $newToken['expires_in'] ?? null,
+            ]);
+        }
+
+        return $client;
     }
 }

@@ -20,6 +20,11 @@ return new class extends Migration
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+
+            // Campos do Google OAuth
+            $table->text('google_token')->nullable();
+            $table->text('google_refresh_token')->nullable();
+            $table->integer('google_token_expires_in')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -43,8 +48,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };
