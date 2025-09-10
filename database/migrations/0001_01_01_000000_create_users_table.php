@@ -22,6 +22,9 @@ return new class extends Migration
             $table->timestamps();
 
             // Campos do Google OAuth
+            // Campos do Google OAuth
+            $table->string('google_id')->nullable();
+            $table->string('google_email')->nullable();
             $table->text('google_token')->nullable();
             $table->text('google_refresh_token')->nullable();
             $table->integer('google_token_expires_in')->nullable();

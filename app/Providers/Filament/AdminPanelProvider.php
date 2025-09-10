@@ -103,18 +103,31 @@ class AdminPanelProvider extends PanelProvider
                     ])
                     ->registration(true)
                     ->createUserUsing(function (string $provider, SocialiteUserContract $oauthUser) {
-                        $service = app(GoogleService::class);
+                        /** @var \App\Models\User|null $currentUser */
+                        $currentUser = Auth::user();
 
+                        // Se já está logado e não é login social
+                        if ($currentUser && ! $currentUser->hasGoogleOauth()) {
+                            $currentUser->google_id = $oauthUser->getId();
+                            $currentUser->google_token = $oauthUser->token;
+                            $currentUser->google_refresh_token = $oauthUser->refreshToken ?? null;
+                            $currentUser->google_email = $oauthUser->getEmail();
+                            $currentUser->save();
+
+                            // Retorna o usuário logado, sem criar novo
+                            return $currentUser;
+                        }
+
+                        // Caso padrão para login/cadastro
+                        $service = app(GoogleService::class);
                         $email = $oauthUser->getEmail();
 
-                        // verifica se o domínio do email é autorizado
                         if (!app('App\Services\DominioEmailService')->isEmailAutorizado($email)) {
                             throw new \App\Exceptions\EmailNaoAutorizado(
                                 'Email não é permitido para cadastro, entre em contato com o administrador.'
                             );
                         }
 
-                        // verifica se já existe um SocialiteUser vinculado a esse provider e provider_id
                         $existingSocialite = SocialiteUser::where('provider', $provider)
                             ->where('provider_id', $oauthUser->getId())
                             ->first();
@@ -123,9 +136,9 @@ class AdminPanelProvider extends PanelProvider
                             return $existingSocialite->user;
                         }
 
-                        // usa a sua GoogleService para registrar ou logar
                         return $service->registrarOuLogar($oauthUser);
                     })
+
             ]);
     }
 }

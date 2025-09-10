@@ -32,6 +32,19 @@ class ManageSeries extends ManageRecords
                 ->modalSubmitAction(false) // only a viewer
                 ->modalCancelActionLabel('Close')
                 ->modalContent(fn() => view('filament.modals.drive-files')),
+
+
+            Actions\Action::make('googleConnect')
+                ->label('Conectar com Google')
+                ->icon('heroicon-o-arrow-right-on-rectangle')
+                ->color('success')
+                ->url(route('socialite.filament.admin.oauth.redirect', ['provider' => 'google']))
+                ->visible(function () {
+                    /** @var \App\Models\User */
+                    $user = Auth::user();
+
+                    return !$user?->hasGoogleOauth() ?? false;
+                }),
         ];
     }
 }

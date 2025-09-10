@@ -40,6 +40,11 @@ class User extends Authenticatable implements FilamentUser
         'email_approved',
         'email_verified_at',
         'password',
+        'google_id',
+        'google_email',
+        'google_token',
+        'google_refresh_token',
+        'google_token_expires_in',
     ];
 
     /**
@@ -62,6 +67,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'google_token_expires_in' => 'datetime',
         ];
     }
 
