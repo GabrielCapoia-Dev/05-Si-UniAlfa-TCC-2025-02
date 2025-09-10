@@ -27,10 +27,8 @@ class ManageSeries extends ManageRecords
 
                     return $user?->hasGoogleOauth() ?? false;
                 })
-                ->modalHeading('My Google Drive')
-                ->modalWidth('7xl')
-                ->modalSubmitAction(false) // only a viewer
-                ->modalCancelActionLabel('Close')
+                ->modalHeading('Seletor de Planilhas')
+                ->modalWidth('md') // pode ser md ou lg, mas não precisa xl
                 ->modalContent(fn() => view('filament.modals.drive-files')),
 
 

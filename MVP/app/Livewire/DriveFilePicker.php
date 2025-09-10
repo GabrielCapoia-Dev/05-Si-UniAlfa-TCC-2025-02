@@ -86,22 +86,41 @@ class DriveFilePicker extends Component
         $this->loadFiles();
     }
 
-    public function downloadFile(string $fileId)
+    public function confirmSelection()
     {
-        try {
-            $service = app(GoogleDriveService::class);
-            $user = Auth::user();
-            
-            $downloadUrl = $service->getDownloadUrl($user, $fileId);
-            $this->dispatch('download-file', url: $downloadUrl);
-        } catch (\Throwable $e) {
-            $this->dispatch('show-notification', type: 'error', message: 'Erro ao baixar arquivo: ' . $e->getMessage());
+        if (empty($this->selectedFiles)) {
+            $this->dispatch('show-notification', [
+                'type' => 'warning',
+                'message' => 'Selecione pelo menos um arquivo.'
+            ]);
+            return;
         }
+
+        // Get selected files data
+        $selectedFilesData = array_filter($this->files, function($file) {
+            return in_array($file['id'], $this->selectedFiles);
+        });
+
+        // Dispatch event to parent component with selected files
+        $this->dispatch('files-selected', [
+            'files' => array_values($selectedFilesData),
+            'count' => count($selectedFilesData)
+        ]);
+
+        // Close modal
+        $this->dispatch('close-modal');
+        
+        // Show success message
+        $this->dispatch('show-notification', [
+            'type' => 'success',
+            'message' => count($selectedFilesData) . ' arquivo(s) selecionado(s) com sucesso!'
+        ]);
     }
 
-    public function shareFile(string $fileId)
+    public function cancelSelection()
     {
-        $this->dispatch('open-share-modal', fileId: $fileId);
+        $this->selectedFiles = [];
+        $this->dispatch('close-modal');
     }
 
     private function loadFiles()
@@ -123,25 +142,20 @@ class DriveFilePicker extends Component
 
             $service = app(GoogleDriveService::class);
             
-            // Usar método mais simples se o serviço original não suportar os novos parâmetros
-            if (method_exists($service, 'listFiles')) {
-                try {
-                    $this->files = $service->listFiles(
-                        $user,
-                        $this->search,
-                        50,
-                        $this->currentFolderId ?? null,
-                        $this->sortBy . ' ' . $this->sortDirection
-                    );
-                } catch (\ArgumentCountError $e) {
-                    // Fallback para método original
-                    $this->files = $service->listFiles($user, $this->search, 50);
-                }
-            } else {
-                $this->files = [];
-                $this->error = true;
-                $this->errorMessage = 'Serviço do Google Drive não disponível.';
+            // Build order by string
+            $orderBy = $this->sortBy;
+            if ($this->sortBy === 'modifiedTime') {
+                $orderBy = 'modifiedTime';
             }
+            $orderBy .= ' ' . $this->sortDirection;
+
+            $this->files = $service->listFiles(
+                $user,
+                $this->search,
+                50,
+                $this->currentFolderId ?? null,
+                $orderBy
+            );
 
         } catch (\Throwable $e) {
             $this->files = [];
@@ -172,10 +186,10 @@ class DriveFilePicker extends Component
     {
         $typeMap = [
             'application/vnd.google-apps.folder' => 'folder',
-            'application/vnd.google-apps.document' => 'document',
-            'application/vnd.google-apps.spreadsheet' => 'spreadsheet',
-            'application/vnd.google-apps.presentation' => 'presentation',
-            'application/pdf' => 'pdf',
+            'application/vnd.google-apps.spreadsheet' => 'planilha',
+            'application/vnd.ms-excel' => 'excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'excel',
+            'text/csv' => 'csv',
         ];
 
         foreach ($typeMap as $mime => $type) {
@@ -184,11 +198,7 @@ class DriveFilePicker extends Component
             }
         }
 
-        if (str_starts_with($mimeType, 'image/')) return 'image';
-        if (str_starts_with($mimeType, 'video/')) return 'video';
-        if (str_starts_with($mimeType, 'audio/')) return 'audio';
-
-        return 'file';
+        return 'arquivo';
     }
 
     public function render()

@@ -67,16 +67,16 @@ class GoogleDriveService
             if (!empty($search)) {
                 $query[] = "name contains '{$search}'";
             }
-            // Filtrar apenas planilhas
-            $spreadsheetMimeTypes = [
-                "application/vnd.google-apps.spreadsheet",
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "text/csv"
-            ];
+            // // Filtrar apenas planilhas
+            // $spreadsheetMimeTypes = [
+            //     "application/vnd.google-apps.spreadsheet",
+            //     "application/vnd.ms-excel",
+            //     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            //     "text/csv"
+            // ];
 
-            $mimeTypeFilter = '(' . implode(' or ', array_map(fn($m) => "mimeType='{$m}'", $spreadsheetMimeTypes)) . ')';
-            $query[] = $mimeTypeFilter;
+            // $mimeTypeFilter = '(' . implode(' or ', array_map(fn($m) => "mimeType='{$m}'", $spreadsheetMimeTypes)) . ')';
+            // $query[] = $mimeTypeFilter;
             
             $queryString = implode(' and ', $query);
 

@@ -75,9 +75,9 @@ class GoogleService
         $expiresAt = now()->addSeconds(max(60, (int) $expiresIn - 60));
 
         $user->forceFill([
-            'google_access_token' => $oauthUser->token,
+            'google_token' => $oauthUser->token,
             'google_refresh_token' => $refresh,
-            'google_token_expires_at' => $expiresAt,
+            'google_token_expires_in' => $expiresAt,
         ])->save();
     }
     /**
