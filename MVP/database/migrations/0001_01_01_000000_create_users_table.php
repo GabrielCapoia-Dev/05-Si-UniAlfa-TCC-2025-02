@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('google_email')->nullable();
             $table->text('google_token')->nullable();
             $table->text('google_refresh_token')->nullable();
-            $table->timestamp('google_token_expires_in')->nullable();
+            $table->datetime('google_token_expires_in')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

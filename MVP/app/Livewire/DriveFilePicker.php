@@ -142,6 +142,7 @@ class DriveFilePicker extends Component
 
             $service = app(GoogleDriveService::class);
             
+            
             // Build order by string
             $orderBy = $this->sortBy;
             if ($this->sortBy === 'modifiedTime') {

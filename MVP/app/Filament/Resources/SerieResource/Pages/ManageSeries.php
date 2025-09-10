@@ -6,6 +6,7 @@ use App\Filament\Resources\SerieResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\HtmlString;
 
 class ManageSeries extends ManageRecords
 {
@@ -15,12 +16,13 @@ class ManageSeries extends ManageRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
 
             Actions\Action::make('googleDrive')
                 ->label('Google Drive')
-                ->icon('heroicon-o-folder-open')
-                ->color('primary')
+                ->icon(fn() => new HtmlString(
+                    @file_get_contents(public_path('images/google-drive-icon.svg')) ?: ''
+                ))
+                ->color('gray')
                 ->visible(function () {
                     /** @var \App\Models\User */
                     $user = Auth::user();
@@ -28,14 +30,16 @@ class ManageSeries extends ManageRecords
                     return $user?->hasGoogleOauth() ?? false;
                 })
                 ->modalHeading('Seletor de Planilhas')
-                ->modalWidth('md') // pode ser md ou lg, mas não precisa xl
+                ->modalWidth('md')
                 ->modalContent(fn() => view('filament.modals.drive-files')),
 
 
             Actions\Action::make('googleConnect')
                 ->label('Conectar com Google')
-                ->icon('heroicon-o-arrow-right-on-rectangle')
-                ->color('success')
+                ->icon(fn() => new HtmlString(
+                    @file_get_contents(public_path('images/google-drive-icon.svg')) ?: ''
+                ))
+                ->color('gray')
                 ->url(route('socialite.filament.admin.oauth.redirect', ['provider' => 'google']))
                 ->visible(function () {
                     /** @var \App\Models\User */
@@ -43,6 +47,9 @@ class ManageSeries extends ManageRecords
 
                     return !$user?->hasGoogleOauth() ?? false;
                 }),
+
+            Actions\CreateAction::make(),
+
         ];
     }
 }

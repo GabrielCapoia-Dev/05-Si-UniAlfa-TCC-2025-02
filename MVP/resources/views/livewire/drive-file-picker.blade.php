@@ -1,7 +1,6 @@
 {{-- resources/views/livewire/drive-file-picker.blade.php --}}
 <div class="h-full flex flex-col">
 
-    <!-- Breadcrumbs (apenas se não estiver na raiz) -->
     @if(count($breadcrumbs) > 1)
         <div class="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
             <nav class="flex items-center space-x-2 text-sm">
@@ -45,30 +44,68 @@
                             
                             <!-- File Icon -->
                             <div class="flex justify-center mb-3">
-                                @if(isset($file['iconLink']) && $file['iconLink'])
-                                    <img src="{{ $file['iconLink'] }}" alt="" class="h-12 w-12">
+                                @php
+                                    $isFolder = $this->getFileTypeFromMimeType($file['mimeType']) === 'folder';
+                                    $viewLink = !empty($file['webViewLink'])
+                                        ? $file['webViewLink']
+                                        : 'https://drive.google.com/file/d/' . $file['id'] . '/view';
+                                @endphp
+
+                                @if($isFolder)
+                                    {{-- Pasta: usa botão que chama openFolder --}}
+                                    <button
+                                        type="button"
+                                        onclick="event.stopPropagation()"
+                                        wire:click="openFolder('{{ $file['id'] }}', '{{ addslashes($file['name']) }}')"
+                                        class="rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        title="Abrir pasta"
+                                        aria-label="Abrir pasta: {{ $file['name'] }}"
+                                    >
+                                        @if(isset($file['iconLink']) && $file['iconLink'])
+                                            <img src="{{ $file['iconLink'] }}" alt="" class="h-12 w-12">
+                                        @else
+                                            <div class="h-12 w-12 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
+                                                <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/>
+                                                </svg>
+                                            </div>
+                                        @endif
+                                    </button>
                                 @else
-                                    <div class="h-12 w-12 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
-                                        <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                                            @if($this->getFileTypeFromMimeType($file['mimeType']) === 'folder')
-                                                <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/>
-                                            @else
-                                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                            @endif
-                                        </svg>
-                                    </div>
+                                    {{-- Arquivo: ícone vira link para visualizar no Drive --}}
+                                    <a
+                                        href="{{ $viewLink }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onclick="event.stopPropagation()"
+                                        class="rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        title="Abrir no Google Drive"
+                                        aria-label="Abrir no Google Drive: {{ $file['name'] }}"
+                                    >
+                                        @if(isset($file['iconLink']) && $file['iconLink'])
+                                            <img src="{{ $file['iconLink'] }}" alt="" class="h-12 w-12">
+                                        @else
+                                            <div class="h-12 w-12 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center">
+                                                <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                                </svg>
+                                            </div>
+                                        @endif
+                                    </a>
                                 @endif
                             </div>
 
-                            <!-- File Info -->
+                            {{-- File Info --}}
                             <div class="text-center">
-                                <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate mb-2" title="{{ $file['name'] }}">
-                                    {{ $file['name'] }}
+                                <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2" title="{{ $file['name'] }}">
+
+                                        <span class="truncate">{{ $file['name'] }}</span>
                                 </h3>
+
                                 <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                    <div>{{ \Carbon\Carbon::parse($file['modifiedTime'])->tz(config('app.timezone'))->format('d/m/Y') }}</div>
+                                    <div>Modificado em: {{ \Carbon\Carbon::parse($file['modifiedTime'])->tz(config('app.timezone'))->format('d/m/Y') }}</div>
                                     @if(isset($file['size']) && $file['size'])
-                                        <div>{{ $this->formatFileSize((int)$file['size']) }}</div>
+                                        <div>Tamanho: {{ $this->formatFileSize((int)$file['size']) }}</div>
                                     @endif
                                 </div>
                             </div>

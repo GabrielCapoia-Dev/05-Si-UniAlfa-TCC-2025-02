@@ -7,6 +7,7 @@ use Google\Client;
 use Google\Service\Drive;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Arr;
 
 class GoogleDriveService
 {
@@ -21,19 +22,20 @@ class GoogleDriveService
         $token = [
             'access_token'  => $user->google_token,
             'refresh_token' => $user->google_refresh_token,
-            'expires_in'    => $user->google_token_expires_in ?? 3600,
             'created'       => now()->subHour()->getTimestamp(),
+            'expires_in'    => max(60, now()->diffInSeconds($user->google_token_expires_at, false) ?? 0),
         ];
-
         $client->setAccessToken($token);
 
         if ($client->isAccessTokenExpired() && filled($user->google_refresh_token)) {
             $newToken = $client->fetchAccessTokenWithRefreshToken($user->google_refresh_token);
-            $user->update([
-                'google_token' => $newToken['access_token'] ?? $user->google_token,
-                'google_token_expires_in' => (int)($newToken['expires_in'] ?? 3600),
-            ]);
-            $client->setAccessToken($newToken);
+
+            $user->forceFill([
+                'google_token'     => Arr::get($newToken, 'access_token', $user->google_token),
+                'google_token_expires_in' => now()->addSeconds((int) Arr::get($newToken, 'expires_in', 3600) - 60),
+            ])->save();
+
+            $client->setAccessToken(array_merge($token, $newToken));
         }
 
         return $client;
@@ -67,17 +69,17 @@ class GoogleDriveService
             if (!empty($search)) {
                 $query[] = "name contains '{$search}'";
             }
-            // // Filtrar apenas planilhas
-            // $spreadsheetMimeTypes = [
-            //     "application/vnd.google-apps.spreadsheet",
-            //     "application/vnd.ms-excel",
-            //     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            //     "text/csv"
-            // ];
+            // Filtrar apenas planilhas
+            $spreadsheetMimeTypes = [
+                "application/vnd.google-apps.spreadsheet",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "text/csv"
+            ];
 
-            // $mimeTypeFilter = '(' . implode(' or ', array_map(fn($m) => "mimeType='{$m}'", $spreadsheetMimeTypes)) . ')';
-            // $query[] = $mimeTypeFilter;
-            
+            $mimeTypeFilter = '(' . implode(' or ', array_map(fn($m) => "mimeType='{$m}'", $spreadsheetMimeTypes)) . ')';
+            $query[] = $mimeTypeFilter;
+
             $queryString = implode(' and ', $query);
 
             // Fazer a requisição com cache
