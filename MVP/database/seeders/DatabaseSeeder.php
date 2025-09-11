@@ -33,6 +33,22 @@ class DatabaseSeeder extends Seeder
             'Criar Dominios de Email',
             'Editar Dominios de Email',
             'Excluir Dominios de Email',
+            'Listar Séries',
+            'Criar Séries',
+            'Editar Séries',
+            'Excluir Séries',
+            'Listar Pontos de Parada',
+            'Criar Pontos de Parada',
+            'Editar Pontos de Parada',
+            'Excluir Pontos de Parada',
+            'Listar Veículos',
+            'Criar Veículos',
+            'Editar Veículos',
+            'Excluir Veículos',
+            'Listar Escolas',
+            'Criar Escolas',
+            'Editar Escolas',
+            'Excluir Escolas',
         ];
 
         // Criação das permissões

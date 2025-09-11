@@ -12,23 +12,28 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\IgnoredUser;
 
 class UserResource extends Resource
 {
 
     public static function getNavigationBadge(): ?string
     {
-        $value = (string) static::getModel()::count();
+        $admin = Auth::user();
+        if (!$admin) return null;
 
-        if ($value > 0) {
-            return $value;
-        }
-        return null;
+        $ignoredUserIds = IgnoredUser::where('admin_id', $admin->id)->pluck('user_id')->toArray();
+
+        $count = static::getModel()::where('email_approved', false)
+            ->whereNotIn('id', $ignoredUserIds)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
     }
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Quantidade de usuários cadastrados';
+        return 'Novos Usuários';
     }
 
     protected static ?string $model = User::class;
@@ -69,6 +74,7 @@ class UserResource extends Resource
                 Forms\Components\Select::make('role')
                     ->label('Nivel de acesso')
                     ->relationship('roles', 'name', function (Builder $query) {
+
                         /** @var \App\Models\User|null $user */
                         $user = Auth::user();
                         if (!$user || $user->hasRole('Admin')) {
@@ -131,12 +137,10 @@ class UserResource extends Resource
                         /** @var \App\Models\User|null $user */
                         $user = Auth::user();
 
-                        // Se não estiver autenticado, esconde
                         if (!$user) {
                             return false;
                         }
 
-                        // Mostra só para Admin
                         return $user->hasRole('Admin');
                     })
                     ->inline(false)
@@ -173,16 +177,29 @@ class UserResource extends Resource
                             /** @var \App\Models\User|null $user */
                             $user = Auth::user();
 
-                            // Se não estiver autenticado, esconde
                             if (!$user) {
                                 return false;
                             }
-
-                            // Mostra só para Admin
                             return $user->hasRole('Admin');
                         }),
                 ])
             ]);
+    }
+
+    protected function getTableQuery()
+    {
+        $admin = Auth::user();
+
+        $pendingUsers = static::getModel()::where('email_approved', false)->pluck('id');
+
+        foreach ($pendingUsers as $userId) {
+            IgnoredUser::firstOrCreate([
+                'admin_id' => $admin->id,
+                'user_id'  => $userId,
+            ]);
+        }
+
+        return parent::getTableQuery();
     }
 
 
@@ -209,7 +226,6 @@ class UserResource extends Resource
         $user = Auth::user();
 
         if ($user && !$user->hasRole('Admin')) {
-            // Apenas não-admins veem só usuários não-admins
             $query->whereHas('roles', fn($q) => $q->where('name', '!=', 'Admin'));
         }
 
