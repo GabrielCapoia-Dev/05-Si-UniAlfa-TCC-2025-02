@@ -3,13 +3,21 @@
 namespace App\Providers;
 
 use App\Models\DominioEmail;
+use App\Models\Escola;
 use App\Models\Permission;
+use App\Models\PontosDeParada;
 use App\Models\Role;
+use App\Models\Serie;
 use App\Models\User;
+use App\Models\Veiculo;
 use App\Policies\DominioEmailPolicy;
+use App\Policies\EscolaPolicy;
 use App\Policies\PermissionPolicy;
+use App\Policies\PontosDeParadaPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SeriePolicy;
 use App\Policies\UserPolicy;
+use App\Policies\VeiculoPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Filament\Support\Assets\Css;
@@ -32,6 +40,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Permission::class, PermissionPolicy::class);
         Gate::policy(DominioEmail::class, DominioEmailPolicy::class);
+        Gate::policy(Serie::class, SeriePolicy::class);
+        Gate::policy(PontosDeParada::class, PontosDeParadaPolicy::class);
+        Gate::policy(Escola::class, EscolaPolicy::class);
+        Gate::policy(Veiculo::class, VeiculoPolicy::class);
 
         FilamentAsset::register([
             Css::make('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),

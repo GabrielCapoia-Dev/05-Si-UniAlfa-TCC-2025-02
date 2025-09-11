@@ -19,10 +19,16 @@ class UserResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $admin = Auth::user();
-        if (!$admin) return null;
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
 
-        $ignoredUserIds = IgnoredUser::where('admin_id', $admin->id)->pluck('user_id')->toArray();
+        if (! $user || ! $user->hasRole('Admin')) {
+            return null;
+        }
+
+        $ignoredUserIds = IgnoredUser::where('admin_id', $user->id)
+            ->pluck('user_id')
+            ->toArray();
 
         $count = static::getModel()::where('email_approved', false)
             ->whereNotIn('id', $ignoredUserIds)
