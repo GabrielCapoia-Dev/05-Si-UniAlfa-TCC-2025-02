@@ -9,7 +9,7 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
-class Escola extends Model
+class Turma extends Model
 {
     use HasFactory;
     use Notifiable;
@@ -19,15 +19,10 @@ class Escola extends Model
     protected $table = 'escolas';
 
     protected $fillable = [
-        'nome',
-        'latitude',
-        'longitude',
-        'raio',
-        'logradouro',
-        'bairro',
-        'cidade',
-        'estado',
-        'cep',
+        'id_serie',
+        'id_escola',
+        'turma',
+        'turno',
     ];
 
 
@@ -35,20 +30,21 @@ class Escola extends Model
     {
         return LogOptions::defaults()
             ->logOnly([
-                'nome',
-                'latitude',
-                'longitude',
-                'raio',
-                'logradouro',
-                'bairro',
-                'cidade',
-                'estado',
-                'cep',
+                'id_serie',
+                'id_escola',
+                'turma',
+                'turno',
             ]);
     }
 
-    public function turmas()
+
+    public function serie()
     {
-        return $this->hasMany(Turma::class);
+        return $this->belongsTo(Serie::class);
+    }
+
+    public function escola()
+    {
+        return $this->belongsTo(Escola::class);
     }
 }

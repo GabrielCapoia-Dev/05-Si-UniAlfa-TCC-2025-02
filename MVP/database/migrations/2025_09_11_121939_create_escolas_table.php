@@ -13,6 +13,17 @@ return new class extends Migration
     {
         Schema::create('escolas', function (Blueprint $table) {
             $table->id();
+            $table->string('nome')->unique();
+            $table->decimal('latitude')->nullable();
+            $table->decimal('longitude')->nullable();
+            $table->integer('raio')->nullable();
+            $table->string('logradouro');
+            $table->string('bairro');
+            $table->string('cidade');
+            $table->string('estado');
+            $table->string('cep')->max(8);
+            $table->string('numero')->nullable();
+            $table->string('complemento')->nullable();
             $table->timestamps();
         });
     }

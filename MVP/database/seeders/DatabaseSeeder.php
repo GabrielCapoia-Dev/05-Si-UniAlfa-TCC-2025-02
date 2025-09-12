@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\DominioEmail;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
@@ -58,10 +59,10 @@ class DatabaseSeeder extends Seeder
 
         // Criação da rule Admin
         $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-        
+
         // Atribui todas as permissões à role Admin
         $adminRole->syncPermissions($permissionsList);
-        
+
 
         // Criação do usuário admin
         $adminUser = User::firstOrCreate(
@@ -76,5 +77,34 @@ class DatabaseSeeder extends Seeder
 
         // Atribui a role Admin ao usuário
         $adminUser->assignRole($adminRole);
+
+
+        /**
+         * Criar domínios de email
+         */
+
+        // Lista de permissões que serão atribuídas à role Admin
+        $emailPermissionsList = [
+            [
+                'gmail.com',
+                'edu.umuarama.pr.gov.br',
+                'umuarama.pr.gov.br',
+            ],
+            [
+                'Geral',
+                'Educação',
+                'Administrativo'
+            ]
+        ];
+
+        foreach ($emailPermissionsList[0] as $index => $dominio) {
+            $setor = $emailPermissionsList[1][$index] ?? 'Geral';
+
+            DominioEmail::create([
+                'dominio_email' => $dominio,
+                'setor' => $setor,
+                'status' => 'ativo',
+            ]);
+        }
     }
 }
