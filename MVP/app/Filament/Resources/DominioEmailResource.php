@@ -14,6 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class DominioEmailResource extends Resource
 {
@@ -89,8 +90,17 @@ class DominioEmailResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(function () {
+                            /** @var \App\Models\User|null $user */
+                            $user = Auth::user();
+                            if (!$user) {
+                                return false;
+                            }
+                            return $user->hasRole('Admin');
+                        }),
                 ]),
+
             ]);
     }
 
