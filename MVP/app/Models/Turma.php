@@ -16,7 +16,7 @@ class Turma extends Model
     use HasRoles;
     use LogsActivity;
 
-    protected $table = 'escolas';
+    protected $table = 'turmas';
 
     protected $fillable = [
         'id_serie',
@@ -40,11 +40,11 @@ class Turma extends Model
 
     public function serie()
     {
-        return $this->belongsTo(Serie::class);
+        return $this->belongsTo(Serie::class, 'id_serie');
     }
 
     public function escola()
     {
-        return $this->belongsTo(Escola::class);
+        return $this->belongsTo(Escola::class, 'id_escola');
     }
 }
