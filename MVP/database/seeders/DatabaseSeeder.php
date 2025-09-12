@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\DominioEmail;
+use App\Models\Serie;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
@@ -58,10 +60,10 @@ class DatabaseSeeder extends Seeder
 
         // Criação da rule Admin
         $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-        
+
         // Atribui todas as permissões à role Admin
         $adminRole->syncPermissions($permissionsList);
-        
+
 
         // Criação do usuário admin
         $adminUser = User::firstOrCreate(
@@ -76,5 +78,59 @@ class DatabaseSeeder extends Seeder
 
         // Atribui a role Admin ao usuário
         $adminUser->assignRole($adminRole);
+
+
+        /**
+         * Criar domínios de email
+         */
+
+        $emailPermissionsList = [
+            [
+                'gmail.com',
+                'edu.umuarama.pr.gov.br',
+                'umuarama.pr.gov.br',
+            ],
+            [
+                'Geral',
+                'Educação',
+                'Administrativo'
+            ]
+        ];
+
+        foreach ($emailPermissionsList[0] as $index => $dominio) {
+            $setor = $emailPermissionsList[1][$index] ?? 'Geral';
+
+            DominioEmail::create([
+                'dominio_email' => $dominio,
+                'setor' => $setor,
+                'status' => 'ativo',
+            ]);
+        }
+
+        /**
+         * Criar séries
+         */
+
+        $seriesList = [
+            'Infantil 4',
+            'Infantil 5',
+            '1º Ano',
+            '2º Ano',
+            '3º Ano',
+            '4º Ano',
+            '5º Ano',
+            '6º Ano',
+            '7º Ano',
+            '8º Ano',
+            '9º Ano',
+            '1º Ano Ensino Médio',
+            '2º Ano Ensino Médio',
+            '3º Ano Ensino Médio',
+        ];
+
+        // Criação das permissões
+        foreach ($seriesList as $seriesName) {
+            Serie::firstOrCreate(['nome' => $seriesName]);
+        }
     }
 }
