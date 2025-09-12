@@ -15,9 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('id_escola')->constrained('escolas')->cascadeOnDelete();
             $table->foreignId('id_serie')->nullable()->constrained('series')->nullOnDelete();
-            $table->string('turma')->max(1);
+            $table->string('turma')->max(1)->unique();
             $table->string('turno');
             $table->timestamps();
+
+            $table->unique(['id_escola', 'id_serie', 'turno', 'turma'], 'turma_unica_por_contexto');
         });
     }
 

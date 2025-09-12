@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\DominioEmail;
+use App\Models\Serie;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
@@ -83,7 +84,6 @@ class DatabaseSeeder extends Seeder
          * Criar domínios de email
          */
 
-        // Lista de permissões que serão atribuídas à role Admin
         $emailPermissionsList = [
             [
                 'gmail.com',
@@ -105,6 +105,32 @@ class DatabaseSeeder extends Seeder
                 'setor' => $setor,
                 'status' => 'ativo',
             ]);
+        }
+
+        /**
+         * Criar séries
+         */
+
+        $seriesList = [
+            'Infantil 4',
+            'Infantil 5',
+            '1º Ano',
+            '2º Ano',
+            '3º Ano',
+            '4º Ano',
+            '5º Ano',
+            '6º Ano',
+            '7º Ano',
+            '8º Ano',
+            '9º Ano',
+            '1º Ano Ensino Médio',
+            '2º Ano Ensino Médio',
+            '3º Ano Ensino Médio',
+        ];
+
+        // Criação das permissões
+        foreach ($seriesList as $seriesName) {
+            Serie::firstOrCreate(['nome' => $seriesName]);
         }
     }
 }

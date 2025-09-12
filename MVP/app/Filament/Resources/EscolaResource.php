@@ -189,15 +189,28 @@ class EscolaResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Tables\Actions\Action::make('viewTurmas')
+                    ->label('Ver Turmas')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn($record) => route('filament.admin.resources.turmas.index', [
+                        'tableFilters' => [
+                            'id_escola' => [
+                                'value' => $record->id,
+                            ],
+                        ],
+                    ])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
+
             ->headerActions([
                 FilamentExportHeaderAction::make('export')
-                    ->defaultFormat('pdf')
                     ->label('Exportar')
-                    ->disableAdditionalColumns()
+                    ->defaultFormat('xlsx')
+                    ->directDownload()
             ])
+
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

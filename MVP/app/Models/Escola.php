@@ -28,6 +28,8 @@ class Escola extends Model
         'cidade',
         'estado',
         'cep',
+        'numero',
+        'complemento'
     ];
 
 
