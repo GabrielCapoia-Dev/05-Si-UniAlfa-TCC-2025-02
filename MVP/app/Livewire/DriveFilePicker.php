@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Livewire;
 
 use App\Services\GoogleDriveService;
@@ -27,9 +28,13 @@ class DriveFilePicker extends Component
 
     public function updatedSearch()
     {
+        if (!empty($this->search)) {
+            $this->currentFolderId = null;
+        }
+
+        $this->selectedFiles = [];
         $this->loadFiles();
     }
-
     public function toggleViewMode()
     {
         $this->viewMode = $this->viewMode === 'grid' ? 'list' : 'grid';
@@ -43,16 +48,16 @@ class DriveFilePicker extends Component
             $this->sortBy = $column;
             $this->sortDirection = 'asc';
         }
-        
+
         $this->loadFiles();
     }
 
     public function selectFile(string $fileId)
     {
         if (in_array($fileId, $this->selectedFiles)) {
-            $this->selectedFiles = array_filter($this->selectedFiles, fn($id) => $id !== $fileId);
+            $this->selectedFiles = [];
         } else {
-            $this->selectedFiles[] = $fileId;
+            $this->selectedFiles = [$fileId];
         }
     }
 
@@ -97,7 +102,7 @@ class DriveFilePicker extends Component
         }
 
         // Get selected files data
-        $selectedFilesData = array_filter($this->files, function($file) {
+        $selectedFilesData = array_filter($this->files, function ($file) {
             return in_array($file['id'], $this->selectedFiles);
         });
 
@@ -109,7 +114,7 @@ class DriveFilePicker extends Component
 
         // Close modal
         $this->dispatch('close-modal');
-        
+
         // Show success message
         $this->dispatch('show-notification', [
             'type' => 'success',
@@ -141,8 +146,8 @@ class DriveFilePicker extends Component
             }
 
             $service = app(GoogleDriveService::class);
-            
-            
+
+
             // Build order by string
             $orderBy = $this->sortBy;
             if ($this->sortBy === 'modifiedTime') {
@@ -157,7 +162,6 @@ class DriveFilePicker extends Component
                 $this->currentFolderId ?? null,
                 $orderBy
             );
-
         } catch (\Throwable $e) {
             $this->files = [];
             $this->error = true;
@@ -170,16 +174,16 @@ class DriveFilePicker extends Component
     public function formatFileSize(int $size): string
     {
         if ($size === 0) return '0 B';
-        
+
         $units = ['B', 'KB', 'MB', 'GB'];
         $unitIndex = 0;
         $fileSize = (float) $size;
-        
+
         while ($fileSize >= 1024 && $unitIndex < count($units) - 1) {
             $fileSize /= 1024;
             $unitIndex++;
         }
-        
+
         return round($fileSize, 1) . ' ' . $units[$unitIndex];
     }
 

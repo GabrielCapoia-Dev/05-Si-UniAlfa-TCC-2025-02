@@ -28,10 +28,17 @@ class VeiculoResource extends Resource
                     ->required(),
 
                 Forms\Components\TextInput::make('placa')
-                    ->label('Placa do Veiculo')
+                    ->label('Placa do Veículo')
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->regex('/^[A-Z]{3}-[0-9]{4}$/'),
+                    ->rule('regex:/^[A-Z]{3}-?[A-Z0-9]{4}$/')
+                    ->helperText('Formato válido: ABC-1234 ou ABC1D23 (Mercosul).')
+                    ->validationMessages([
+                        'regex' => 'A placa deve estar no formato ABC-1234 ou ABC1D23.',
+                    ])
+                    ->placeholder('Ex.: ABC-1234 ou ABC1D23')
+                    ->afterStateUpdated(fn($state, callable $set) => $set('placa', strtoupper($state))),
+
 
                 Forms\Components\TextInput::make('assentos')
                     ->label('Quantidade de Assentos')

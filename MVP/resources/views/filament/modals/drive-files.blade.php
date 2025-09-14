@@ -1,5 +1,5 @@
 {{-- resources/views/filament/modals/drive-files.blade.php --}}
-<div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" wire:ignore.self>
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
 
@@ -25,8 +25,29 @@
         </div>
 
         <!-- Body com barra de rolagem interna -->
-        <div class="flex-1 p-6 overflow-hidden">
-            <livewire:drive-file-picker />
+        <div class="flex-1 p-6 overflow-hidden flex flex-col gap-4">
+
+            <!-- Barra de pesquisa -->
+            <div class="relative">
+                <input type="text"
+                    wire:model.debounce.500ms="search"
+                    style="padding-left: 2.5rem "
+                    placeholder="Pesquisar arquivos no Google Drive..."
+                    class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 pl-10 pr-4 py-2 text-sm"
+                    wire:model.debounce.500ms="search" />
+
+                <div style="left: 0.7rem" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Lista de arquivos -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <livewire:drive-file-picker />
+            </div>
         </div>
 
         <!-- Footer -->

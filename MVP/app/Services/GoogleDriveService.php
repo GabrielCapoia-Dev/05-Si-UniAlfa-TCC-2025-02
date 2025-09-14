@@ -52,8 +52,21 @@ class GoogleDriveService
             $client = $this->getClientFor($user);
             $service = new Drive($client);
 
-            // Construir query
             $query = [];
+
+            if (!empty($search)) {
+                // Busca global em todo o Drive (inclusive compartilhados)
+                $query[] = "name contains '{$search}'";
+                $query[] = "trashed = false";
+            } else {
+                // Apenas navegação normal na pasta atual
+                if ($folderId) {
+                    $query[] = "'{$folderId}' in parents";
+                } else {
+                    $query[] = "'root' in parents";
+                }
+                $query[] = "trashed = false";
+            }
 
             // Filtrar por pasta pai
             if ($folderId) {
@@ -69,16 +82,6 @@ class GoogleDriveService
             if (!empty($search)) {
                 $query[] = "name contains '{$search}'";
             }
-            // Filtrar apenas planilhas
-            $spreadsheetMimeTypes = [
-                "application/vnd.google-apps.spreadsheet",
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "text/csv"
-            ];
-
-            $mimeTypeFilter = '(' . implode(' or ', array_map(fn($m) => "mimeType='{$m}'", $spreadsheetMimeTypes)) . ')';
-            $query[] = $mimeTypeFilter;
 
             $queryString = implode(' and ', $query);
 
