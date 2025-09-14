@@ -103,7 +103,7 @@ class DatabaseSeeder extends Seeder
             DominioEmail::create([
                 'dominio_email' => $dominio,
                 'setor' => $setor,
-                'status' => 'ativo',
+                'status' => 1,
             ]);
         }
 
