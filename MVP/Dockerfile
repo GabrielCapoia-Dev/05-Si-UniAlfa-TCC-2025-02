@@ -21,8 +21,6 @@ RUN composer dump-autoload --optimize \
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www
 
-RUN php artisan migrate:fresh --seed --force
-
 EXPOSE 9000
 
 CMD ["php-fpm"]
