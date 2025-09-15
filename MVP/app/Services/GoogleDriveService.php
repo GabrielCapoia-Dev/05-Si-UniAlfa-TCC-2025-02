@@ -41,32 +41,23 @@ class GoogleDriveService
         return $client;
     }
 
-    public function listFiles(
-        User $user,
-        string $search = '',
-        int $limit = 50,
-        ?string $folderId = null,
-        string $orderBy = 'name asc'
-    ): array {
+    public function listFiles(User $user, string $search = '', int $limit = 50, ?string $folderId = null, string $orderBy = 'name asc'): array {
         try {
             $client = $this->getClientFor($user);
             $service = new Drive($client);
 
             $query = [];
 
+            $query[] = "mimeType = 'application/vnd.google-apps.spreadsheet'";
+            $query[] = "trashed = false";
+
             if (!empty($search)) {
                 $query[] = "name contains '{$search}'";
-                $query[] = "trashed = false";
-            } else {
-                $query[] = $folderId
-                    ? "'{$folderId}' in parents"
-                    : "'root' in parents";
-                $query[] = "trashed = false";
             }
 
             $queryString = implode(' and ', $query);
 
-            $cacheKey = "drive_files_" . $user->id . "_" . md5($queryString . $orderBy . $limit);
+            $cacheKey = "drive_sheets_" . $user->id . "_" . md5($queryString . $orderBy . $limit);
 
             return Cache::remember($cacheKey, 300, function () use ($service, $queryString, $orderBy, $limit) {
                 try {
@@ -74,7 +65,7 @@ class GoogleDriveService
                         'q' => $queryString,
                         'orderBy' => $orderBy,
                         'pageSize' => $limit,
-                        'fields' => 'files(id,name,mimeType,size,modifiedTime,webViewLink,iconLink,parents,permissions)',
+                        'fields' => 'files(id,name,mimeType,size,modifiedTime,webViewLink,iconLink,parents,permissions),nextPageToken',
                         'supportsAllDrives' => true,
                         'includeItemsFromAllDrives' => true,
                     ]);
@@ -88,9 +79,7 @@ class GoogleDriveService
                         'webViewLink' => $file->getWebViewLink(),
                         'iconLink' => $file->getIconLink(),
                         'parents' => $file->getParents(),
-                        'isFolder' => $file->getMimeType() === 'application/vnd.google-apps.folder',
-                        'canEdit' => $this->canEditFile($file),
-                        'canShare' => $this->canShareFile($file),
+                        'isFolder' => false, // aqui nunca será folder
                     ], $response->getFiles());
                 } catch (\Google\Service\Exception $e) {
                     $body = json_decode($e->getMessage(), true);
@@ -103,13 +92,14 @@ class GoogleDriveService
                 }
             });
         } catch (\Exception $e) {
-            Log::error('Erro ao listar arquivos do Drive', [
+            Log::error('Erro ao listar arquivos do Drive (apenas Google Sheets)', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
         }
     }
+
 
     public function getFile(User $user, string $fileId): array
     {
@@ -136,8 +126,6 @@ class GoogleDriveService
                 'owners' => $file->getOwners(),
                 'lastModifyingUser' => $file->getLastModifyingUser(),
                 'isFolder' => $file->getMimeType() === 'application/vnd.google-apps.folder',
-                'canEdit' => $this->canEditFile($file),
-                'canShare' => $this->canShareFile($file),
             ];
         } catch (\Exception $e) {
             Log::error('Erro ao obter arquivo do Drive', [
@@ -149,155 +137,6 @@ class GoogleDriveService
         }
     }
 
-    public function getDownloadUrl(User $user, string $fileId): string
-    {
-        try {
-            $client = $this->getClientFor($user);
-            $service = new Drive($client);
-
-            $file = $service->files->get($fileId, [
-                'fields' => 'mimeType,webContentLink',
-                'supportsAllDrives' => true,
-            ]);
-
-            if (str_starts_with($file->getMimeType(), 'application/vnd.google-apps.')) {
-                return $this->getExportUrl($service, $fileId, $file->getMimeType());
-            }
-
-            return $file->getWebContentLink() ?: throw new \Exception('Arquivo não pode ser baixado');
-        } catch (\Exception $e) {
-            Log::error('Erro ao obter URL de download', [
-                'user_id' => $user->id,
-                'file_id' => $fileId,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
-
-    public function shareFile(User $user, string $fileId, array $permissions = []): array
-    {
-        try {
-            $client = $this->getClientFor($user);
-            $service = new Drive($client);
-
-            $results = [];
-
-            foreach ($permissions as $permission) {
-                $drivePermission = new \Google\Service\Drive\Permission();
-                $drivePermission->setType($permission['type']); // 'user', 'group', 'domain', 'anyone'
-                $drivePermission->setRole($permission['role']); // 'reader', 'writer', 'commenter'
-
-                if (isset($permission['emailAddress'])) {
-                    $drivePermission->setEmailAddress($permission['emailAddress']);
-                }
-
-                $result = $service->permissions->create($fileId, $drivePermission, [
-                    'sendNotificationEmail' => $permission['sendEmail'] ?? false,
-                    'supportsAllDrives' => true,
-                ]);
-
-                $results[] = [
-                    'id' => $result->getId(),
-                    'type' => $result->getType(),
-                    'role' => $result->getRole(),
-                    'emailAddress' => $result->getEmailAddress(),
-                ];
-            }
-
-            return $results;
-        } catch (\Exception $e) {
-            Log::error('Erro ao compartilhar arquivo', [
-                'user_id' => $user->id,
-                'file_id' => $fileId,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
-
-    public function getFolderPath(User $user, string $folderId): array
-    {
-        try {
-            $client = $this->getClientFor($user);
-            $service = new Drive($client);
-
-            $path = [];
-            $currentId = $folderId;
-
-            while ($currentId && $currentId !== 'root') {
-                $folder = $service->files->get($currentId, [
-                    'fields' => 'id,name,parents',
-                    'supportsAllDrives' => true,
-                ]);
-
-                array_unshift($path, [
-                    'id' => $folder->getId(),
-                    'name' => $folder->getName(),
-                ]);
-
-                $parents = $folder->getParents();
-                $currentId = $parents ? $parents[0] : null;
-            }
-
-            // Adicionar raiz
-            array_unshift($path, [
-                'id' => 'root',
-                'name' => 'Meu Drive',
-            ]);
-
-            return $path;
-        } catch (\Exception $e) {
-            Log::error('Erro ao obter caminho da pasta', [
-                'user_id' => $user->id,
-                'folder_id' => $folderId,
-                'error' => $e->getMessage()
-            ]);
-            return [['id' => 'root', 'name' => 'Meu Drive']];
-        }
-    }
-
-    private function getExportUrl(Drive $service, string $fileId, string $mimeType): string
-    {
-        $exportMimeTypes = [
-            'application/vnd.google-apps.document' => 'application/pdf',
-            'application/vnd.google-apps.spreadsheet' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.google-apps.presentation' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        ];
-
-        $exportMimeType = $exportMimeTypes[$mimeType] ?? 'application/pdf';
-
-        // Gerar URL de export
-        return "https://www.googleapis.com/drive/v3/files/{$fileId}/export?mimeType=" . urlencode($exportMimeType);
-    }
-
-    private function canEditFile($file): bool
-    {
-        $permissions = $file->getPermissions();
-        if (!$permissions) return false;
-
-        foreach ($permissions as $permission) {
-            if ($permission->getRole() === 'owner' || $permission->getRole() === 'writer') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function canShareFile($file): bool
-    {
-        $permissions = $file->getPermissions();
-        if (!$permissions) return false;
-
-        foreach ($permissions as $permission) {
-            if ($permission->getRole() === 'owner') {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     public function clearCache(User $user): void
     {

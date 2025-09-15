@@ -31,7 +31,9 @@ class ManageEscolas extends ManageRecords
                 })
                 ->modalHeading('Seletor de Planilhas')
                 ->modalWidth('md')
-                ->modalContent(fn() => view('filament.modals.drive-files')),
+                ->modalContent(fn() => view('filament.modals.drive-files', [
+                    'modelClass' => static::getModel(),
+                ])),
 
 
             Actions\Action::make('googleConnect')

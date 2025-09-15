@@ -2,28 +2,11 @@
 
 <div class="h-full flex flex-col">
 
-    @if (count($breadcrumbs) > 1)
-        <div class="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex justify-start">
-            <button wire:click="goBack"
-                class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Voltar
-            </button>
-        </div>
-    @endif
-
-
     <!-- Content Area -->
     <div class="flex-1 overflow-y-auto">
         @if ($error)
             <div class="text-center py-12">
                 @if ($errorToken)
-                    @php
-                        dd($errorToken);
-
-                    @endphp
                     <div class="flex flex-col items-center gap-3">
                         <!-- Ícone de erro -->
                         <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,25 +48,7 @@
                 @endphp
 
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-                    {{-- Pastas primeiro --}}
-                    @foreach ($folders as $file)
-                        <li class="flex items-center justify-between px-3 py-2 cursor-pointer"
-                            wire:click="openFolder('{{ $file['id'] }}', '{{ addslashes($file['name']) }}')">
-                            <div class="flex items-center gap-2">
-                                <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                        d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" />
-                                </svg>
-                                <span
-                                    class="font-medium text-gray-900 dark:text-white truncate">{{ $file['name'] }}</span>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                {{ \Carbon\Carbon::parse($file['modifiedTime'])->tz(config('app.timezone'))->format('d/m/Y') }}
-                            </div>
-                        </li>
-                    @endforeach
-
-                    {{-- Arquivos depois --}}
+                    {{-- Arquivos --}}
                     @foreach ($docs as $file)
                         @php
                             $viewLink = !empty($file['webViewLink'])

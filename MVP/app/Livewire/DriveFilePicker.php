@@ -3,8 +3,11 @@
 namespace App\Livewire;
 
 use App\Services\GoogleDriveService;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Filament\Notifications\Actions\Action;
+
 
 class DriveFilePicker extends Component
 {
@@ -20,22 +23,16 @@ class DriveFilePicker extends Component
     public array $breadcrumbs = [];
     public ?string $currentFolderId = null;
     public bool $loading = false;
+    public string $modelClass;
+    public ?string $err = null;
 
-    public function mount()
+    public function mount(string $modelClass)
     {
+        $this->modelClass = $modelClass;
         $this->breadcrumbs = [['name' => 'Meu Drive', 'id' => null]];
         $this->loadFiles();
     }
 
-    public function updatedSearch()
-    {
-        if (!empty($this->search)) {
-            $this->currentFolderId = null;
-        }
-
-        $this->selectedFiles = [];
-        $this->loadFiles();
-    }
     public function toggleViewMode()
     {
         $this->viewMode = $this->viewMode === 'grid' ? 'list' : 'grid';
@@ -52,17 +49,6 @@ class DriveFilePicker extends Component
 
         $this->loadFiles();
     }
-
-    public function goBack()
-    {
-        if (count($this->breadcrumbs) > 1) {
-            array_pop($this->breadcrumbs); // remove a última pasta
-            $this->currentFolderId = end($this->breadcrumbs)['id'] ?? null;
-            $this->selectedFiles = [];
-            $this->loadFiles();
-        }
-    }
-
 
     public function selectFile(string $fileId)
     {
@@ -90,49 +76,97 @@ class DriveFilePicker extends Component
         $this->loadFiles();
     }
 
-    public function navigateToBreadcrumb(int $index)
-    {
-        $this->breadcrumbs = array_slice($this->breadcrumbs, 0, $index + 1);
-        $this->currentFolderId = $this->breadcrumbs[$index]['id'] ?? null;
-        $this->selectedFiles = [];
-        $this->loadFiles();
-    }
-
     public function refreshFiles()
     {
         $this->loadFiles();
     }
 
-    public function confirmSelection()
+    private function validateSheetForModel(string $fileId): void
     {
-        if (empty($this->selectedFiles)) {
-            $this->dispatch('show-notification', [
-                'type' => 'warning',
-                'message' => 'Selecione pelo menos um arquivo.'
-            ]);
-            return;
+        if (! class_exists($this->modelClass)) {
+            throw new \RuntimeException("Model {$this->modelClass} não encontrada.");
         }
 
-        // Get selected files data
-        $selectedFilesData = array_filter($this->files, function ($file) {
-            return in_array($file['id'], $this->selectedFiles);
-        });
+        $model = app($this->modelClass);
 
-        // Dispatch event to parent component with selected files
-        $this->dispatch('files-selected', [
-            'files' => array_values($selectedFilesData),
-            'count' => count($selectedFilesData)
-        ]);
+        if (! method_exists($model, 'validateGoogleSheet')) {
+            throw new \RuntimeException("A model {$this->modelClass} não implementa validateGoogleSheet().");
+        }
 
-        // Close modal
-        $this->dispatch('close-modal');
-
-        // Show success message
-        $this->dispatch('show-notification', [
-            'type' => 'success',
-            'message' => count($selectedFilesData) . ' arquivo(s) selecionado(s) com sucesso!'
-        ]);
+        $model->validateGoogleSheet($fileId);
     }
+
+    public function confirmSelection(\App\Services\GoogleDriveService $drive)
+    {
+        if (empty($this->selectedFiles)) {
+            return \Filament\Notifications\Notification::make()
+                ->title('Nenhum arquivo selecionado')
+                ->body('Selecione uma planilha antes de continuar.')
+                ->danger()->persistent()->send();
+        }
+
+        $user   = \Illuminate\Support\Facades\Auth::user();
+        $fileId = $this->selectedFiles[0];
+
+        try {
+            $file = $drive->getFile($user, $fileId);
+
+            if ($file['mimeType'] !== 'application/vnd.google-apps.spreadsheet') {
+                return \Filament\Notifications\Notification::make()
+                    ->title('Arquivo inválido')
+                    ->body('Você deve selecionar uma planilha do Google Sheets.')
+                    ->danger()->persistent()->send();
+            }
+
+            // ===== IMPORTAR de acordo com a model =====
+            if (! class_exists($this->modelClass)) {
+                throw new \RuntimeException("Model {$this->modelClass} não encontrada.");
+            }
+            /** @var \Illuminate\Database\Eloquent\Model $model */
+            $model = app($this->modelClass);
+
+            if (! method_exists($model, 'importGoogleSheet')) {
+                throw new \RuntimeException("A model {$this->modelClass} não implementa importGoogleSheet().");
+            }
+
+            $result = $model->importGoogleSheet($fileId);
+
+            \Filament\Notifications\Notification::make()
+                ->title('Importação concluída')
+                ->body("Planilha **{$file['name']}** processada com sucesso.\n" .
+                    "Registros inseridos/atualizados: **{$result['imported_or_updated']}**.")
+                ->success()
+                ->duration(8000)
+                ->send();
+
+            $this->dispatch('closeModal', id: $fileId);
+        } catch (\RuntimeException $e) {
+            // Erros de validação de linhas: mostra como popup grande
+            $msg = $e->getMessage();
+
+            // para não estourar a UI, corta texto após 20 linhas
+            $lines = explode("\n", $msg);
+            $shown = array_slice($lines, 0, 20);
+            if (count($lines) > 20) {
+                $shown[] = '... (erros adicionais omitidos)';
+            }
+
+            \Filament\Notifications\Notification::make()
+                ->title('Importação cancelada')
+                ->body(implode("\n", $shown))
+                ->danger()
+                ->persistent()
+                ->send();
+        } catch (\Throwable $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Erro ao processar planilha')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
 
     public function cancelSelection()
     {
