@@ -22,11 +22,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Rmsramos\Activitylog\ActivitylogPlugin;
 use Filament\Http\Middleware\Authenticate;
-use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
-use DutchCodingCompany\FilamentSocialite\Models\SocialiteUser;
-use DutchCodingCompany\FilamentSocialite\Provider;
 use Illuminate\Support\Facades\Route;
-use Laravel\Socialite\Contracts\User as SocialiteUserContract;
+use App\Livewire\LoginPage;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -39,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(LoginPage::class)
             ->colors([
                 'primary' => Color::Green,
                 'gray' => Color::Slate,
@@ -84,61 +81,6 @@ class AdminPanelProvider extends PanelProvider
                         // Mostra só para Admin
                         return $user->hasRole('Admin');
                     }),
-
-                FilamentSocialitePlugin::make()
-                    ->providers([
-                        'google' => Provider::make('google')
-                            ->label('Google')
-                            ->scopes([
-                                'openid',
-                                'email',
-                                'profile',
-                                'https://www.googleapis.com/auth/drive.metadata.readonly',
-                            ])
-                            ->with([
-                                'prompt' => 'select_account',
-                                'access_type' => 'offline',
-                                'include_granted_scopes' => 'true',
-                            ]),
-                    ])
-                    ->registration(true)
-                    ->createUserUsing(function (string $provider, SocialiteUserContract $oauthUser) {
-                        /** @var \App\Models\User|null $currentUser */
-                        $currentUser = Auth::user();
-
-                        // Se já está logado e não é login social
-                        if ($currentUser && ! $currentUser->hasGoogleOauth()) {
-                            $currentUser->google_id = $oauthUser->getId();
-                            $currentUser->google_token = $oauthUser->token;
-                            $currentUser->google_refresh_token = $oauthUser->refreshToken ?? null;
-                            $currentUser->google_email = $oauthUser->getEmail();
-                            $currentUser->save();
-
-                            // Retorna o usuário logado, sem criar novo
-                            return $currentUser;
-                        }
-
-                        // Caso padrão para login/cadastro
-                        $service = app(GoogleService::class);
-                        $email = $oauthUser->getEmail();
-
-                        if (!app('App\Services\DominioEmailService')->isEmailAutorizado($email)) {
-                            throw new \App\Exceptions\EmailNaoAutorizado(
-                                'Email não é permitido para cadastro, entre em contato com o administrador.'
-                            );
-                        }
-
-                        $existingSocialite = SocialiteUser::where('provider', $provider)
-                            ->where('provider_id', $oauthUser->getId())
-                            ->first();
-
-                        if ($existingSocialite) {
-                            return $existingSocialite->user;
-                        }
-
-                        return $service->registrarOuLogar($oauthUser);
-                    })
-
             ]);
     }
 }

@@ -77,11 +77,6 @@ class User extends Authenticatable implements FilamentUser
             ->logOnly(['name', 'email', 'email_verified_at', 'email_approved']);
     }
 
-    public function socialiteUsers(): HasMany
-    {
-        return $this->hasMany(SocialiteUser::class);
-    }
-
     public function canAccessPanel(Panel $panel, ?bool $register = false): bool
     {
         if ($this->email_approved == true) {

@@ -55,51 +55,31 @@ class GoogleDriveService
             $query = [];
 
             if (!empty($search)) {
-                // Busca global em todo o Drive (inclusive compartilhados)
                 $query[] = "name contains '{$search}'";
                 $query[] = "trashed = false";
             } else {
-                // Apenas navegação normal na pasta atual
-                if ($folderId) {
-                    $query[] = "'{$folderId}' in parents";
-                } else {
-                    $query[] = "'root' in parents";
-                }
+                $query[] = $folderId
+                    ? "'{$folderId}' in parents"
+                    : "'root' in parents";
                 $query[] = "trashed = false";
-            }
-
-            // Filtrar por pasta pai
-            if ($folderId) {
-                $query[] = "'{$folderId}' in parents";
-            } else {
-                $query[] = "'root' in parents";
-            }
-
-            // Excluir lixeira
-            $query[] = "trashed = false";
-
-            // Filtro de busca
-            if (!empty($search)) {
-                $query[] = "name contains '{$search}'";
             }
 
             $queryString = implode(' and ', $query);
 
-            // Fazer a requisição com cache
             $cacheKey = "drive_files_" . $user->id . "_" . md5($queryString . $orderBy . $limit);
 
             return Cache::remember($cacheKey, 300, function () use ($service, $queryString, $orderBy, $limit) {
-                $response = $service->files->listFiles([
-                    'q' => $queryString,
-                    'orderBy' => $orderBy,
-                    'pageSize' => $limit,
-                    'fields' => 'files(id,name,mimeType,size,modifiedTime,webViewLink,iconLink,parents,permissions)',
-                    'supportsAllDrives' => true,
-                    'includeItemsFromAllDrives' => true,
-                ]);
+                try {
+                    $response = $service->files->listFiles([
+                        'q' => $queryString,
+                        'orderBy' => $orderBy,
+                        'pageSize' => $limit,
+                        'fields' => 'files(id,name,mimeType,size,modifiedTime,webViewLink,iconLink,parents,permissions)',
+                        'supportsAllDrives' => true,
+                        'includeItemsFromAllDrives' => true,
+                    ]);
 
-                return array_map(function ($file) {
-                    return [
+                    return array_map(fn($file) => [
                         'id' => $file->getId(),
                         'name' => $file->getName(),
                         'mimeType' => $file->getMimeType(),
@@ -111,14 +91,21 @@ class GoogleDriveService
                         'isFolder' => $file->getMimeType() === 'application/vnd.google-apps.folder',
                         'canEdit' => $this->canEditFile($file),
                         'canShare' => $this->canShareFile($file),
-                    ];
-                }, $response->getFiles());
+                    ], $response->getFiles());
+                } catch (\Google\Service\Exception $e) {
+                    $body = json_decode($e->getMessage(), true);
+
+                    if (isset($body['error']['code']) && (int) $body['error']['code'] === 401) {
+                        throw new \RuntimeException('TOKEN_EXPIRED');
+                    }
+
+                    throw $e;
+                }
             });
         } catch (\Exception $e) {
             Log::error('Erro ao listar arquivos do Drive', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }
@@ -173,12 +160,10 @@ class GoogleDriveService
                 'supportsAllDrives' => true,
             ]);
 
-            // Para arquivos do Google Workspace, usar export
             if (str_starts_with($file->getMimeType(), 'application/vnd.google-apps.')) {
                 return $this->getExportUrl($service, $fileId, $file->getMimeType());
             }
 
-            // Para arquivos regulares, usar webContentLink
             return $file->getWebContentLink() ?: throw new \Exception('Arquivo não pode ser baixado');
         } catch (\Exception $e) {
             Log::error('Erro ao obter URL de download', [
@@ -317,6 +302,6 @@ class GoogleDriveService
     public function clearCache(User $user): void
     {
         $pattern = "drive_files_{$user->id}_*";
-        Cache::flush(); // Ou implementar uma limpeza mais específica
+        Cache::flush();
     }
 }

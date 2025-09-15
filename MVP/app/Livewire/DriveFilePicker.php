@@ -12,7 +12,8 @@ class DriveFilePicker extends Component
     public array $files = [];
     public array $selectedFiles = [];
     public bool $error = false;
-    public string $errorMessage = '';
+    public bool $errorToken = false;
+    public string $errorMessage = "";
     public string $viewMode = 'grid';
     public string $sortBy = 'name';
     public string $sortDirection = 'asc';
@@ -51,6 +52,17 @@ class DriveFilePicker extends Component
 
         $this->loadFiles();
     }
+
+    public function goBack()
+    {
+        if (count($this->breadcrumbs) > 1) {
+            array_pop($this->breadcrumbs); // remove a última pasta
+            $this->currentFolderId = end($this->breadcrumbs)['id'] ?? null;
+            $this->selectedFiles = [];
+            $this->loadFiles();
+        }
+    }
+
 
     public function selectFile(string $fileId)
     {
@@ -141,19 +153,11 @@ class DriveFilePicker extends Component
                 $this->files = [];
                 $this->error = true;
                 $this->errorMessage = 'Sua conta Google não está conectada.';
-                $this->loading = false;
                 return;
             }
 
             $service = app(GoogleDriveService::class);
-
-
-            // Build order by string
-            $orderBy = $this->sortBy;
-            if ($this->sortBy === 'modifiedTime') {
-                $orderBy = 'modifiedTime';
-            }
-            $orderBy .= ' ' . $this->sortDirection;
+            $orderBy = $this->sortBy . ' ' . $this->sortDirection;
 
             $this->files = $service->listFiles(
                 $user,
@@ -162,6 +166,16 @@ class DriveFilePicker extends Component
                 $this->currentFolderId ?? null,
                 $orderBy
             );
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'TOKEN_EXPIRED') {
+                $this->files = [];
+                $this->error = true;
+                $this->errorToken = true;
+            } else {
+                $this->files = [];
+                $this->error = true;
+                $this->errorMessage = 'Falha ao carregar seus arquivos do Drive.';
+            }
         } catch (\Throwable $e) {
             $this->files = [];
             $this->error = true;
@@ -170,6 +184,7 @@ class DriveFilePicker extends Component
             $this->loading = false;
         }
     }
+
 
     public function formatFileSize(int $size): string
     {

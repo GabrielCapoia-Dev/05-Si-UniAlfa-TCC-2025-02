@@ -36,17 +36,10 @@ class ManageEscolas extends ManageRecords
 
             Actions\Action::make('googleConnect')
                 ->label('Conectar com Google')
-                ->icon(fn() => new HtmlString(
-                    @file_get_contents(public_path('images/google-drive-icon.svg')) ?: ''
-                ))
+                ->icon(fn() => new HtmlString(@file_get_contents(public_path('images/google-drive-icon.svg')) ?: ''))
                 ->color('gray')
-                ->url(route('socialite.filament.admin.oauth.redirect', ['provider' => 'google']))
-                ->visible(function () {
-                    /** @var \App\Models\User */
-                    $user = Auth::user();
-
-                    return !$user?->hasGoogleOauth() ?? false;
-                }),
+                ->url(route('google.redirect'))
+                ->visible(fn() => !Auth::user()?->google_token),
 
             Actions\CreateAction::make(),
         ];

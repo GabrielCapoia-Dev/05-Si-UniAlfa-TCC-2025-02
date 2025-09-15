@@ -4,50 +4,72 @@ namespace App\Services;
 
 use App\Models\User;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Illuminate\Support\Str;
 use Google\Client as GoogleClient;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class GoogleService
 {
-    public function registrarOuLogar(SocialiteUserContract $oauthUser): User|null
+    public function registrarOuLogar(SocialiteUserContract $oauthUser): ?User
     {
-        if ($this->validaUser($oauthUser)) {
-            return $this->loginGoogle($oauthUser);
-        }
-        return $this->registroGoogle($oauthUser);
-    }
+        $user = User::where('email', $oauthUser->getEmail())
+            ->orWhere('google_email', $oauthUser->getEmail())
+            ->first();
 
-    private function validaUser(SocialiteUserContract $oauthUser): bool
-    {
-        $user = User::where('email', $oauthUser->getEmail())->first();
+        if ($user == null) {
+            $user = $this->registroGoogle($oauthUser);
+        }
 
         if ($user && $user->email_approved) {
             $this->salvarTokens($user, $oauthUser);
-            return true;
+
+            \Filament\Notifications\Notification::make()
+                ->title('Acesso Permitido')
+                ->body('Bem-vindo de volta!')
+                ->success()
+                ->send();
+
+            return $user;
         }
-        return false;
-    }
-
-    private function loginGoogle(SocialiteUserContract $oauthUser): User|null
-    {
-        $user = User::where('email', $oauthUser->getEmail())->first();
-
-        // Atualiza tokens no login
-        $this->salvarTokens($user, $oauthUser);
-
-        \Filament\Notifications\Notification::make()
-            ->title('Acesso Permitido')
-            ->body('Bem-vindo de volta!')
-            ->success()
-            ->send();
 
         return $user;
     }
 
-    private function registroGoogle(SocialiteUserContract $oauthUser): User
+    private function registroGoogle(SocialiteUserContract $oauthUser): User|Notification
     {
+
+        /** @var \App\Models\User|null $currentUser */
+        $currentUser = Auth::user();
+
+        if ($currentUser && !$currentUser->hasGoogleOauth()) {
+            $currentUser->google_id = $oauthUser->getId();
+            $currentUser->google_token = $oauthUser->token;
+            $currentUser->google_refresh_token = $oauthUser->refreshToken ?? null;
+            $currentUser->google_email = $oauthUser->getEmail();
+            $currentUser->google_token_expires_in = now()->addSeconds(max(60, (int) $oauthUser->expiresIn - 60)) ?? null;
+            $currentUser->save();
+
+            return $currentUser;
+        }
+
+        if ($currentUser && $currentUser->hasGoogleOauth()) {
+            $this->salvarTokens($currentUser, $oauthUser);
+        }
+
+        $email = $oauthUser->getEmail();
+
+        //Se não tiver o email autorizado dispara uma exceção de email nao autorizado
+        if (!app('App\Services\DominioEmailService')->isEmailAutorizado($email)) {
+            return  \Filament\Notifications\Notification::make()
+                ->title('Acesso Negado')
+                ->body('Entre em contato com o administrador e solicite a aprovação do seu e-mail!')
+                ->danger()
+                ->send();
+        }
+
         $user = User::create([
             'name' => $oauthUser->getName() ?? 'Usuário Sem Nome',
             'email' => $oauthUser->getEmail(),
@@ -80,6 +102,7 @@ class GoogleService
             'google_token_expires_in' => $expiresAt,
         ])->save();
     }
+
     /**
      * Retorna um Google Client autenticado para o usuário.
      */

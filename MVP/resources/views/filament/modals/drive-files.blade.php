@@ -52,7 +52,7 @@
 
         <!-- Footer -->
         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center flex-shrink-0">
-            <a href="{{ route('socialite.filament.admin.oauth.redirect', ['provider' => 'google']) }}"
+            <a href="{{ route('google.redirect') }}"
                class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
                 <img src="{{ asset('images/google-logo.svg') }}" alt="Google Logo" class="inline-block w-5 h-5 mr-2">
                 Selecionar Outra Conta
