@@ -9,10 +9,19 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
+COPY composer.json composer.lock ./
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+
 COPY . .
+
+RUN composer dump-autoload --optimize \
+    && composer run-script post-autoload-dump
 
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www
+
+RUN php artisan migrate:fresh --seed --force
 
 EXPOSE 9000
 
