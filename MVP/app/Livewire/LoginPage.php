@@ -3,13 +3,32 @@
 namespace App\Livewire;
 
 use Filament\Pages\Auth\Login as BaseLogin;
+use Filament\Forms;
 use Filament\Actions;
 
 class LoginPage extends BaseLogin
 {
 
-    
-    protected static string $layout = 'livewire.login-page';
+
+    protected static string $layout = 'components.layouts.login-page';
+
+
+    protected function getFormSchema(): array
+    {
+        return [
+            Forms\Components\TextInput::make('email')
+                ->label('Email')
+                ->type('email')
+                ->required()
+                ->autocomplete('username'),
+
+            Forms\Components\TextInput::make('password')
+                ->label('Senha')
+                ->password()
+                ->required()
+                ->autocomplete('current-password'),
+        ];
+    }
 
 
     protected function getFormActions(): array

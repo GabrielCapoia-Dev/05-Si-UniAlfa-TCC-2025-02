@@ -216,7 +216,6 @@ Sinta-se à vontade para adaptar e expandir conforme suas necessidades, lembrand
 - [**Laravel**](https://laravel.com/docs)  
 - [**FilamentPHP**](https://filamentphp.com/docs)  
 - [**Spatie**](https://spatie.be/docs/laravel-permission/v6/basic-usage/basic-usage)  
-- [**FilamentSocialitePlugin**](https://filamentphp.com/plugins/dododedodonl-socialite)  
 
 Bom desenvolvimento! 👍
 
