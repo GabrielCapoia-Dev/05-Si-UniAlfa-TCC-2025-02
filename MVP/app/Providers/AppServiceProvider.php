@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\PontosDeParada;
 use App\Models\Role;
 use App\Models\Serie;
+use App\Models\Turma;
 use App\Models\User;
 use App\Models\Veiculo;
 use App\Policies\DominioEmailPolicy;
@@ -16,6 +17,7 @@ use App\Policies\PermissionPolicy;
 use App\Policies\PontosDeParadaPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SeriePolicy;
+use App\Policies\TurmaPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\VeiculoPolicy;
 use Illuminate\Support\Facades\Gate;
@@ -44,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(PontosDeParada::class, PontosDeParadaPolicy::class);
         Gate::policy(Escola::class, EscolaPolicy::class);
         Gate::policy(Veiculo::class, VeiculoPolicy::class);
+        Gate::policy(Turma::class, TurmaPolicy::class);
 
         FilamentAsset::register([
             Css::make('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),

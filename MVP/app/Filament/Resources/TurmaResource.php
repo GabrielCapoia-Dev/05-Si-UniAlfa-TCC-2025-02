@@ -19,6 +19,8 @@ class TurmaResource extends Resource
     protected static ?string $pluralModelLabel = 'Turmas';
     protected static ?string $modelLabel = 'Turma';
 
+    protected static ?string $navigationGroup = 'Gerenciamento Escolar';
+
     public static function form(Form $form): Form
     {
         return $form

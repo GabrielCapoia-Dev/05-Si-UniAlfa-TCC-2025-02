@@ -51,6 +51,46 @@ class DatabaseSeeder extends Seeder
             'Criar Escolas',
             'Editar Escolas',
             'Excluir Escolas',
+            'Listar Turmas',
+            'Criar Turmas',
+            'Editar Turmas',
+            'Excluir Turmas',
+        ];
+
+        $secretarioPermissionsList = [
+            'Listar Usuários',
+            'Criar Usuários',
+            'Editar Usuários',
+            'Listar Dominios de Email',
+            'Listar Séries',
+            'Criar Séries',
+            'Editar Séries',
+            'Excluir Séries',
+            'Listar Pontos de Parada',
+            'Criar Pontos de Parada',
+            'Editar Pontos de Parada',
+            'Excluir Pontos de Parada',
+            'Listar Escolas',
+            'Criar Escolas',
+            'Editar Escolas',
+            'Excluir Escolas',
+            'Listar Turmas',
+            'Criar Turmas',
+            'Editar Turmas',
+            'Excluir Turmas',
+        ];
+
+        $usuarioPermissionsList = [
+            'Listar Usuários',
+            'Listar Níveis de Acesso',
+            'Listar Permissões de Execução',
+            'Listar Dominios de Email',
+            'Listar Séries',
+            'Listar Pontos de Parada',
+            'Listar Veículos',
+            'Listar Escolas',
+            'Listar Turmas',
+
         ];
 
         // Criação das permissões
@@ -60,12 +100,14 @@ class DatabaseSeeder extends Seeder
 
         // Criação da rule Admin
         $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+        $secretarioRole = Role::firstOrCreate(['name' => 'Secretario']);
+        $usuarioRole = Role::firstOrCreate(['name' => 'Usuario']);
 
         // Atribui todas as permissões à role Admin
         $adminRole->syncPermissions($permissionsList);
+        $secretarioRole->syncPermissions($secretarioPermissionsList);
+        $usuarioRole->syncPermissions($usuarioPermissionsList);
 
-
-        // Criação do usuário admin
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@admin.com'],
             [
@@ -76,8 +118,29 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Atribui a role Admin ao usuário
+        $secretarioUser = User::firstOrCreate(
+            ['email' => 'secretario@secretario.com'],
+            [
+                'name' => 'Secretario',
+                'password' => Hash::make('123456'),
+                'email_verified_at' => now(),
+                'email_approved' => true
+            ]
+        );
+
+        $usuarioUser = User::firstOrCreate(
+            ['email' => 'usuario@usuario.com'],
+            [
+                'name' => 'Usuario',
+                'password' => Hash::make('123456'),
+                'email_verified_at' => now(),
+                'email_approved' => true
+            ]
+        );
+
         $adminUser->assignRole($adminRole);
+        $secretarioUser->assignRole($secretarioRole);
+        $usuarioUser->assignRole($usuarioRole);
 
 
         /**
@@ -128,7 +191,6 @@ class DatabaseSeeder extends Seeder
             '3º Ano Ensino Médio',
         ];
 
-        // Criação das permissões
         foreach ($seriesList as $seriesName) {
             Serie::firstOrCreate(['nome' => $seriesName]);
         }

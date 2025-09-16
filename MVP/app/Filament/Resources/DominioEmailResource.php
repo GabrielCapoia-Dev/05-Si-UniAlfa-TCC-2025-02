@@ -18,6 +18,16 @@ use Illuminate\Support\Facades\Auth;
 
 class DominioEmailResource extends Resource
 {
+    protected static ?string $model = DominioEmail::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-envelope';
+
+    protected static ?string $navigationGroup = "Acesso";
+
+    public static ?string $label = 'Dominio Permitido';
+
+    public static ?string $pluralLabel = 'Dominios Permitidos';
+
     public static function getNavigationBadge(): ?string
     {
         $value = (string) static::getModel()::count();
@@ -33,16 +43,6 @@ class DominioEmailResource extends Resource
     {
         return 'Quantidade de dominios permitidos';
     }
-
-    protected static ?string $model = DominioEmail::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-envelope';
-
-    protected static ?string $navigationGroup = "Gerenciamento";
-
-    public static ?string $label = 'Dominio Permitido';
-
-    public static ?string $pluralLabel = 'Dominios Permitidos';
 
     public static function form(Form $form): Form
     {

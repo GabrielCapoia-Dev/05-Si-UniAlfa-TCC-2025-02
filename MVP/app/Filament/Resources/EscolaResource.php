@@ -11,113 +11,111 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Http;
 use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
-use Illuminate\Validation\Rule;
 
 class EscolaResource extends Resource
 {
     protected static ?string $model = Escola::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
+
     protected static ?string $navigationLabel = 'Escolas';
+
     protected static ?string $pluralModelLabel = 'Escolas';
+
     protected static ?string $modelLabel = 'Escola';
+
+    protected static ?string $navigationGroup = 'Gerenciamento Escolar';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Editar Escola')
+                Forms\Components\TextInput::make('nome')
+                    ->label('Nome')
+                    ->required()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true),
+
+                Forms\Components\Fieldset::make('Informações de Endereço')
                     ->schema([
-                        Forms\Components\TextInput::make('nome')
-                            ->label('Nome')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(ignoreRecord: true),
-
-                        Forms\Components\Fieldset::make('Informações de Endereço')
+                        Forms\Components\Grid::make(8)
                             ->schema([
-                                Forms\Components\Grid::make(8)
-                                    ->schema([
-                                        Forms\Components\TextInput::make('logradouro')
-                                            ->label('Logradouro')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->columnSpan(4)
-                                            ->disabled(fn(callable $get) => blank($get('cep'))),
+                                Forms\Components\TextInput::make('logradouro')
+                                    ->label('Logradouro')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpan(4)
+                                    ->disabled(fn(callable $get) => blank($get('cep'))),
 
-                                        Forms\Components\TextInput::make('numero')
-                                            ->label('Número')
-                                            ->nullable()
-                                            ->mask('999999')
-                                            ->rule('regex:/^[0-9]{0,6}$/')
-                                            ->maxLength(6)
-                                            ->columnSpan(2),
-
-
-                                        Forms\Components\TextInput::make('cep')
-                                            ->label('CEP')
-                                            ->required()
-                                            ->mask('99999-999')
-                                            ->rule('regex:/^\d{5}-\d{3}$/')
-                                            ->maxLength(9)
-                                            ->columnSpan(2)
-                                            ->reactive()
-                                            ->afterStateUpdated(function ($state, callable $set) {
-                                                // Remove máscara para consulta
-                                                $cep = preg_replace('/[^0-9]/', '', $state);
-                                                if (strlen($cep) !== 8) {
-                                                    return;
-                                                }
-
-                                                try {
-                                                    $response = Http::get("https://viacep.com.br/ws/{$cep}/json/");
-                                                    if ($response->successful() && !$response->json('erro')) {
-                                                        $data = $response->json();
-                                                        $set('logradouro', $data['logradouro'] ?? '');
-                                                        $set('bairro', $data['bairro'] ?? '');
-                                                        $set('cidade', $data['localidade'] ?? '');
-                                                        $set('estado', $data['uf'] ?? '');
-                                                    }
-                                                } catch (\Exception $e) {
-                                                    // Em caso de erro, não quebra o form
-                                                    logger()->error("Erro ao consultar CEP: {$e->getMessage()}");
-                                                }
-                                            }),
-                                    ]),
-
-                                Forms\Components\Grid::make(8)
-                                    ->schema([
-                                        Forms\Components\TextInput::make('bairro')
-                                            ->label('Bairro')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->columnSpan(3)
-                                            ->disabled(fn(callable $get) => blank($get('cep'))),
-
-                                        Forms\Components\TextInput::make('cidade')
-                                            ->label('Cidade')
-                                            ->required()
-                                            ->maxLength(255)
-                                            ->columnSpan(3)
-                                            ->disabled(fn(callable $get) => blank($get('cep'))),
-
-                                        Forms\Components\TextInput::make('estado')
-                                            ->label('Estado')
-                                            ->required()
-                                            ->placeholder('ex.: PR, SP, RJ.')
-                                            ->maxLength(2)
-                                            ->columnSpan(2)
-                                            ->disabled(fn(callable $get) => blank($get('cep'))),
-                                    ]),
-
-                                Forms\Components\TextInput::make('complemento')
-                                    ->label('Complemento Endereço')
+                                Forms\Components\TextInput::make('numero')
+                                    ->label('Número')
                                     ->nullable()
-                                    ->placeholder('Ex.: Próximo ao Supermercado')
-                                    ->maxLength(100),
+                                    ->mask('999999')
+                                    ->rule('regex:/^[0-9]{0,6}$/')
+                                    ->maxLength(6)
+                                    ->columnSpan(2),
+
+
+                                Forms\Components\TextInput::make('cep')
+                                    ->label('CEP')
+                                    ->required()
+                                    ->mask('99999-999')
+                                    ->rule('regex:/^\d{5}-\d{3}$/')
+                                    ->maxLength(9)
+                                    ->columnSpan(2)
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $cep = preg_replace('/[^0-9]/', '', $state);
+                                        if (strlen($cep) !== 8) {
+                                            return;
+                                        }
+
+                                        try {
+                                            $response = Http::get("https://viacep.com.br/ws/{$cep}/json/");
+                                            if ($response->successful() && !$response->json('erro')) {
+                                                $data = $response->json();
+                                                $set('logradouro', $data['logradouro'] ?? '');
+                                                $set('bairro', $data['bairro'] ?? '');
+                                                $set('cidade', $data['localidade'] ?? '');
+                                                $set('estado', $data['uf'] ?? '');
+                                            }
+                                        } catch (\Exception $e) {
+                                            logger()->error("Erro ao consultar CEP: {$e->getMessage()}");
+                                        }
+                                    }),
                             ]),
-                    ])
-                    ->columns(1),
+
+                        Forms\Components\Grid::make(8)
+                            ->schema([
+                                Forms\Components\TextInput::make('bairro')
+                                    ->label('Bairro')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpan(3)
+                                    ->disabled(fn(callable $get) => blank($get('cep'))),
+
+                                Forms\Components\TextInput::make('cidade')
+                                    ->label('Cidade')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpan(3)
+                                    ->disabled(fn(callable $get) => blank($get('cep'))),
+
+                                Forms\Components\TextInput::make('estado')
+                                    ->label('Estado')
+                                    ->required()
+                                    ->placeholder('ex.: PR, SP, RJ.')
+                                    ->maxLength(2)
+                                    ->columnSpan(2)
+                                    ->disabled(fn(callable $get) => blank($get('cep'))),
+                            ]),
+
+                        Forms\Components\TextInput::make('complemento')
+                            ->label('Complemento Endereço')
+                            ->nullable()
+                            ->placeholder('Ex.: Próximo ao Supermercado')
+                            ->maxLength(100),
+                    ]),
             ]);
     }
 

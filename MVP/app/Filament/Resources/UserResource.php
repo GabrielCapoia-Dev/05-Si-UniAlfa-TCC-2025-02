@@ -17,6 +17,18 @@ use App\Models\IgnoredUser;
 class UserResource extends Resource
 {
 
+    protected static ?string $model = User::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    public static ?string $modelLabel = 'Usuário';
+
+    protected static ?string $navigationGroup = "Acesso";
+
+    public static ?string $pluralModelLabel = 'Usuários';
+
+    public static ?string $slug = 'usuarios';
+
     public static function getNavigationBadge(): ?string
     {
         /** @var \App\Models\User|null $user */
@@ -42,17 +54,6 @@ class UserResource extends Resource
         return 'Novos Usuários';
     }
 
-    protected static ?string $model = User::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-users';
-
-    public static ?string $modelLabel = 'Usuário';
-
-    protected static ?string $navigationGroup = "Gerenciamento";
-
-    public static ?string $pluralModelLabel = 'Usuários';
-
-    public static ?string $slug = 'usuarios';
 
 
     public static function form(Form $form): Form

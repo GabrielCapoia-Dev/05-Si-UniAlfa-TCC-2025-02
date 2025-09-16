@@ -27,7 +27,11 @@ class ManageEscolas extends ManageRecords
                     /** @var \App\Models\User */
                     $user = Auth::user();
 
-                    return $user?->hasGoogleOauth() ?? false;
+                    if (!$user) {
+                        return false;
+                    }
+
+                    return $user->hasGoogleOauth() && $user->hasRole('Admin');
                 })
                 ->modalHeading('Seletor de Planilhas')
                 ->modalWidth('md')
@@ -40,6 +44,16 @@ class ManageEscolas extends ManageRecords
                 ->label('Conectar com Google')
                 ->icon(fn() => new HtmlString(@file_get_contents(public_path('images/google-drive-icon.svg')) ?: ''))
                 ->color('gray')
+                ->visible(function () {
+                    /** @var \App\Models\User */
+                    $user = Auth::user();
+
+                    if (!$user) {
+                        return false;
+                    }
+
+                    return $user->hasGoogleOauth() && $user->hasRole('Admin');
+                })
                 ->url(route('google.redirect'))
                 ->visible(fn() => !Auth::user()?->google_token),
 
