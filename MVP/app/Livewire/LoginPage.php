@@ -7,6 +7,11 @@ use Filament\Actions;
 
 class LoginPage extends BaseLogin
 {
+
+    
+    protected static string $layout = 'livewire.login-page';
+
+
     protected function getFormActions(): array
     {
         return [

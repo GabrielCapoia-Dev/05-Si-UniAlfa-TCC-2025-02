@@ -856,12 +856,6 @@
             <div class="cta-content">
                 <h2>Gestão Inteligente do Transporte Escolar</h2>
                 <p>Acesse nossa plataforma administrativa para gerenciar rotas, monitorar veículos, controlar estudantes e gerar relatórios completos do sistema de transporte escolar municipal.</p>
-                <div class="cta-buttons">
-                    <a href="/admin/login" class="btn-primary">
-                        <span>🔐</span>
-                        Acessar Sistema
-                    </a>
-                </div>
             </div>
         </div>
     </section>
