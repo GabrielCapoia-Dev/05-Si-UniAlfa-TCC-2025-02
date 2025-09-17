@@ -30,11 +30,11 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->routes(function () {
-                Route::middleware(['valida.user'])
-                    ->get('/exportar-modelo', [ExportModeloController::class, 'handle'])
-                    ->name('exportar-modelo');
-
-
+                Route::middleware(['valida.user'])->group(function () {
+                    Route::get('/exportar-modelo', [ExportModeloController::class, 'handle'])
+                        ->name('exportar-modelo');
+                });
+                
                 Route::get('/password-reset', PasswordReset::class);
             })
             ->default()

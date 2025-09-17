@@ -79,7 +79,7 @@ class GoogleDriveService
                         'webViewLink' => $file->getWebViewLink(),
                         'iconLink' => $file->getIconLink(),
                         'parents' => $file->getParents(),
-                        'isFolder' => false, // aqui nunca será folder
+                        'isFolder' => false,
                     ], $response->getFiles());
                 } catch (\Google\Service\Exception $e) {
                     $body = json_decode($e->getMessage(), true);
