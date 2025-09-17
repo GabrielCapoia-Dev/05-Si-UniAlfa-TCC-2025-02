@@ -3,24 +3,23 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class ExportModeloController extends Controller
 {
-    public function handle(Request $request): Response
+    public function handle(Request $request)
     {
-        $modelClass = $request->get('model');
+        $user = $request->user();
 
-        if (! $modelClass || ! class_exists($modelClass)) {
-            abort(404, 'Model inválida.');
+        if (! $user || ! $user->hasRole('Admin')) {
+            abort(403, 'Você não tem permissão para exportar o modelo.');
         }
 
-        $model = app($modelClass);
+        $modelClass = $request->query('model');
 
-        if (! method_exists($model, 'exportModelo')) {
-            abort(500, 'Model não implementa exportModelo.');
+        if (! class_exists($modelClass) || ! method_exists($modelClass, 'exportModelo')) {
+            abort(400, 'Modelo inválido.');
         }
 
-        return $model->exportModelo();
+        return app($modelClass)::exportModelo();
     }
 }

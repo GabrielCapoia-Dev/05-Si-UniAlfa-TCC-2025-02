@@ -22,6 +22,7 @@ use Rmsramos\Activitylog\ActivitylogPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\LoginPage;
+use App\Http\Middleware\ValidaUser;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,7 +30,8 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->routes(function () {
-                Route::get('/exportar-modelo', [ExportModeloController::class, 'handle'])
+                Route::middleware(['valida.user'])
+                    ->get('/exportar-modelo', [ExportModeloController::class, 'handle'])
                     ->name('exportar-modelo');
 
 
@@ -65,6 +67,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                ValidaUser::class
             ])
             ->plugins([
                 ActivitylogPlugin::make()

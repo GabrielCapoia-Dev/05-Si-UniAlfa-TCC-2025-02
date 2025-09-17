@@ -27,7 +27,6 @@ class DriveFilePicker extends Component
     public function mount(string $modelClass)
     {
         $this->modelClass = $modelClass;
-        $this->breadcrumbs = [['name' => 'Meu Drive', 'id' => null]];
         $this->loadFiles();
     }
 

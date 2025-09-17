@@ -19,7 +19,6 @@ class ValidateSheetService
         $this->client = $driveService->getClientFor($user);
     }
 
-    /** Garante que a planilha tem as colunas obrigatórias. */
     public function checkStructure(string $fileId, array $rules): array
     {
         [$headers] = $this->readHeadersAndRows($fileId);
@@ -35,7 +34,6 @@ class ValidateSheetService
         return ['valid' => empty($missing), 'errors' => $missing];
     }
 
-    /** Lê cabeçalho (A1:Z1) e todas as linhas seguintes (A2:Z). */
     public function readHeadersAndRows(string $fileId): array
     {
         $sheets = new Sheets($this->client);
@@ -59,14 +57,12 @@ class ValidateSheetService
         return [$headers, $rows];
     }
 
-    /** Transforma as linhas em arrays associativos "header => valor". */
     public function assocRows(string $fileId): array
     {
         [$headers, $rows] = $this->readHeadersAndRows($fileId);
         $assoc = [];
 
         foreach ($rows as $i => $row) {
-            // ignorar linhas totalmente vazias
             if (count(array_filter($row, fn($v) => trim((string)$v) !== '')) === 0) {
                 continue;
             }
@@ -76,7 +72,6 @@ class ValidateSheetService
                 $item[$header] = $row[$idx] ?? null;
             }
 
-            // Guarda número de linha planilha (dados iniciam na linha 2)
             $item['_row'] = $i + 2;
 
             $assoc[] = $item;
@@ -85,7 +80,6 @@ class ValidateSheetService
         return $assoc;
     }
 
-    /** Normalização leve (trim, CEP só dígitos, UF maiúscula). */
     public function normalizeRow(array $row): array
     {
         foreach ($row as $k => $v) {
@@ -93,9 +87,8 @@ class ValidateSheetService
             $row[$k] = is_string($v) ? trim($v) : $v;
         }
 
-        // Normalizações específicas:
         if (isset($row['CEP'])) {
-            $row['CEP'] = preg_replace('/\D+/', '', (string) $row['CEP']); // só dígitos
+            $row['CEP'] = preg_replace('/\D+/', '', (string) $row['CEP']);
         }
         if (isset($row['Estado'])) {
             $row['Estado'] = mb_strtoupper((string) $row['Estado']);
@@ -104,10 +97,6 @@ class ValidateSheetService
         return $row;
     }
 
-    /**
-     * Valida cada linha segundo as regras informadas (regras do Laravel Validator).
-     * Retorna ['valid' => bool, 'errors' => [ ['row' => N, 'messages' => [...]], ... ], 'data' => [ ...normalizado... ] ]
-     */
     public function validateRows(array $assocRows, array $rules, array $attributes = []): array
     {
         $errors = [];
@@ -116,7 +105,6 @@ class ValidateSheetService
         foreach ($assocRows as $row) {
             $row = $this->normalizeRow($row);
 
-            // O Validator espera chaves nomeadas como os campos de entrada.
             $validator = Validator::make($row, $rules, [], $attributes);
 
             if ($validator->fails()) {
