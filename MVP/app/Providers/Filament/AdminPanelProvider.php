@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Controllers\ExportModeloController;
 use App\Livewire\PasswordReset;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -28,6 +29,10 @@ class AdminPanelProvider extends PanelProvider
     {
         return $panel
             ->routes(function () {
+                Route::get('/exportar-modelo', [ExportModeloController::class, 'handle'])
+                    ->name('exportar-modelo');
+
+
                 Route::get('/password-reset', PasswordReset::class);
             })
             ->default()

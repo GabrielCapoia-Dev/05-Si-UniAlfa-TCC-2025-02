@@ -10,6 +10,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\SimpleExcel\SimpleExcelWriter;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Escola extends Model
 {
@@ -56,7 +58,6 @@ class Escola extends Model
         return $this->hasMany(Turma::class);
     }
 
-    /** Valida apenas cabeçalho obrigatório (já existia). */
     public function validateGoogleSheet(string $fileId): void
     {
         $sheetValidator = app(\App\Services\ValidateSheetService::class);
@@ -71,25 +72,18 @@ class Escola extends Model
         }
     }
 
-    /**
-     * Valida TODAS as linhas e importa (upsert por 'nome').
-     * Retorna contagem de linhas importadas/atualizadas.
-     */
     public function importGoogleSheet(string $fileId): array
     {
         $svc = app(\App\Services\ValidateSheetService::class);
 
-        // 1) estrutura (cabeçalho)
         $this->validateGoogleSheet($fileId);
 
-        // 2) linhas associativas
         $rows = $svc->assocRows($fileId);
 
         if (empty($rows)) {
             return ['imported' => 0, 'updated' => 0];
         }
 
-        // 3) regras por linha (compatíveis com sua migration)
         $rules = [
             'Nome'       => ['required', 'string', 'max:255', 'distinct', 'unique:escolas,nome'],
             'Logradouro' => ['required', 'string', 'max:255'],
@@ -98,7 +92,7 @@ class Escola extends Model
             'Estado'     => ['required', 'string', 'size:2', 'regex:/^[A-Z]{2}$/'],
             'CEP'        => ['required', 'regex:/^\d{8}$/'],
             'Numero'     => ['nullable', 'string', 'max:255'],
-            'Número'     => ['nullable', 'string', 'max:255'], // aceita "Número" também
+            'Número'     => ['nullable', 'string', 'max:255'],
             'Complemento' => ['nullable', 'string', 'max:255'],
         ];
 
@@ -117,7 +111,6 @@ class Escola extends Model
         $validate = $svc->validateRows($rows, $rules, $attributes);
 
         if (! $validate['valid']) {
-            // Monta mensagem amigável com linha + erros
             $parts = [];
             foreach ($validate['errors'] as $err) {
                 $ln = $err['row'] ?? '?';
@@ -128,9 +121,7 @@ class Escola extends Model
             );
         }
 
-        // 4) Mapear cabeçalhos => colunas do DB
         $mapHeaderToDb = function (array $r) {
-            // preferir 'Numero' mas aceitar 'Número'
             $numero = $r['Numero'] ?? $r['Número'] ?? null;
 
             return [
@@ -142,26 +133,39 @@ class Escola extends Model
                 'cep'         => $r['CEP'],
                 'numero'      => $numero,
                 'complemento' => $r['Complemento'] ?? null,
-                // latitude/longitude/raio NÃO vêm da planilha (ficam null)
             ];
         };
 
         $payload = array_map($mapHeaderToDb, $validate['data']);
 
-        // 5) Import atômico (se algo falhar, nada é salvo)
         return DB::transaction(function () use ($payload) {
-            // Se quiser evitar updates, troque por: self::insert($payload)
-            // Aqui vamos de UPSERT para garantir idempotência por 'nome'
             $affected = self::upsert(
                 $payload,
-                ['nome'], // constraint única
+                ['nome'],
                 ['logradouro', 'bairro', 'cidade', 'estado', 'cep', 'numero', 'complemento', 'updated_at']
             );
 
-            // O upsert retorna número de linhas afetadas (insert + update)
-            // Não conseguimos separar facilmente insert de update sem consulta extra;
-            // então devolvo tudo em 'affected'.
             return ['imported_or_updated' => $affected];
         });
+    }
+
+    public static function exportModelo(): StreamedResponse
+    {
+        $headers = [
+            'Nome',
+            'Logradouro',
+            'Bairro',
+            'Cidade',
+            'Estado',
+            'CEP',
+            'Numero',
+            'Complemento',
+        ];
+
+        return response()->streamDownload(function () use ($headers) {
+            $writer = SimpleExcelWriter::streamDownload('modelo-escolas.xlsx');
+            $writer->addRow(array_combine($headers, array_fill(0, count($headers), '')));
+            $writer->toBrowser();
+        }, 'modelo-escolas.xlsx');
     }
 }

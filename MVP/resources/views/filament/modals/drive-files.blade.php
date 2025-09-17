@@ -43,10 +43,12 @@
                 Selecionar Outra Conta
             </a>
 
-            <button type="button" onclick="Livewire.emit('closeModal')"
-                class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded-md hover:bg-gray-400 dark:hover:bg-gray-600 focus:outline-none transition">
-                Fechar
-            </button>
+            <a
+                href="{{ route('filament.admin.exportar-modelo', ['model' => \App\Models\Escola::class]) }}"
+                class="fi-btn inline-flex items-center justify-center gap-x-1 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+                download>
+                Baixar modelo
+            </a>
         </div>
     </div>
 </div>
