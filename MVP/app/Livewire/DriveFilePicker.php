@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Services\GoogleDriveService;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\HtmlString;
 use Livewire\Component;
 
 class DriveFilePicker extends Component
@@ -98,22 +99,33 @@ class DriveFilePicker extends Component
 
             Notification::make()
                 ->title('Importação concluída')
-                ->body("Planilha **{$file['name']}** processada com sucesso.\nRegistros inseridos/atualizados: **{$result['imported_or_updated']}**.")
+                ->body("Planilha {$file['name']} processada com sucesso")
                 ->success()
                 ->duration(8000)
                 ->send();
 
             $this->dispatch('closeModal', id: $fileId);
         } catch (\RuntimeException $e) {
-            $lines = explode("\n", $e->getMessage());
-            $shown = array_slice($lines, 0, 20);
-            if (count($lines) > 20) {
-                $shown[] = '... (erros adicionais omitidos)';
-            }
+            $lines = preg_split("/\r?\n/", $e->getMessage());
+
+            // filtra cabeçalho e linhas vazias
+            $filtered = array_values(array_filter($lines, function ($l) {
+                $t = trim($l);
+                if ($t === '') return false;
+                if (stripos($t, 'Importação cancelada') !== false) return false;
+                if (stripos($t, 'Resumo por coluna') !== false) return false;
+                return true;
+            }));
+
+            $shown = array_slice($filtered, 0, 20);
+
+            // Renderiza como lista HTML
+            $lis  = implode('', array_map(fn($l) => '<li>' . e(trim($l)) . '</li>', $shown));
+            $html = new HtmlString('<ul class="list-disc ps-5 space-y-1">' . $lis . '</ul>');
 
             Notification::make()
                 ->title('Importação cancelada')
-                ->body(implode("\n", $shown))
+                ->body($html)
                 ->danger()
                 ->persistent()
                 ->send();

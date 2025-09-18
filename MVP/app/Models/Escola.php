@@ -37,6 +37,30 @@ class Escola extends Model
     ];
 
 
+    private static function inferFieldFromMessage(string $msg): ?string
+    {
+        if (preg_match('/campo\s+([^\s\.\:]+)/iu', $msg, $m)) {
+            return ucfirst($m[1]); // "nome" -> "Nome"
+        }
+        if (preg_match('/^([^\:\.]+)\s*:/u', $msg, $m)) {
+            return trim($m[1]);
+        }
+        foreach (['Nome', 'Logradouro', 'Bairro', 'Cidade', 'Estado', 'CEP', 'Numero', 'Número', 'Complemento'] as $col) {
+            if (stripos($msg, $col) !== false) return $col;
+        }
+        return null;
+    }
+
+    private static function categorizeMessage(string $msg): string
+    {
+        $m = mb_strtolower($msg, 'UTF-8');
+        if (preg_match('/já está em uso|já existe|duplicad|unique|distinct/u', $m)) return 'duplicate';
+        if (preg_match('/em branco|obrigatóri|required/u', $m)) return 'blank';
+        if (preg_match('/formato|inv[aá]lido|regex|tamanho|size/u', $m)) return 'invalid';
+        return 'invalid';
+    }
+
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -111,15 +135,37 @@ class Escola extends Model
         $validate = $svc->validateRows($rows, $rules, $attributes);
 
         if (! $validate['valid']) {
-            $parts = [];
+            $flags = [];
+
             foreach ($validate['errors'] as $err) {
-                $ln = $err['row'] ?? '?';
-                $parts[] = "Linha {$ln}: " . implode(' | ', $err['messages']);
+                foreach ($err['messages'] as $msg) {
+                    $field = self::inferFieldFromMessage($msg) ?? 'Geral';
+                    $cat   = self::categorizeMessage($msg);
+                    $flags[$field][$cat] = true;
+                }
             }
+
+            $labels = [
+                'duplicate' => 'valores que já existem no sistema',
+                'blank'     => 'valores em branco',
+                'invalid'   => 'valores inválidos',
+            ];
+
+            $parts = [];
+            foreach ($flags as $field => $cats) {
+                $present = array_keys(array_filter($cats));
+                if (! $present) continue;
+
+                $desc = array_map(fn($c) => $labels[$c] ?? $c, $present);
+                $prefix = $field === 'Geral' ? 'Geral' : "Coluna {$field}";
+                $parts[] = "{$prefix} possui " . implode(', ', $desc) . '.';
+            }
+
             throw new \RuntimeException(
-                "Importação cancelada. Há linhas com erro:\n" . implode("\n", $parts)
+                implode("\n", $parts)
             );
         }
+
 
         $mapHeaderToDb = function (array $r) {
             $numero = $r['Numero'] ?? $r['Número'] ?? null;
@@ -164,7 +210,31 @@ class Escola extends Model
 
         return response()->streamDownload(function () use ($headers) {
             $writer = SimpleExcelWriter::streamDownload('modelo-escolas.xlsx');
+
             $writer->addRow(array_combine($headers, array_fill(0, count($headers), '')));
+
+            $writer->addRow([
+                'Nome'        => 'Escola Municipal Monteiro Lobato',
+                'Logradouro'  => 'Rua das Flores',
+                'Bairro'      => 'Centro',
+                'Cidade'      => 'Umuarama',
+                'Estado'      => 'PR',
+                'CEP'         => '87501000',
+                'Numero'      => '123',
+                'Complemento' => 'Próximo à praça',
+            ]);
+
+            $writer->addRow([
+                'Nome'        => 'Escola Municipal Machado de Assis',
+                'Logradouro'  => 'Avenida Brasil',
+                'Bairro'      => 'Jardim América',
+                'Cidade'      => 'Maringá',
+                'Estado'      => 'PR',
+                'CEP'         => '87000000',
+                'Numero'      => '456',
+                'Complemento' => '',
+            ]);
+
             $writer->toBrowser();
         }, 'modelo-escolas.xlsx');
     }
