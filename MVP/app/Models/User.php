@@ -112,10 +112,6 @@ class User extends Authenticatable implements FilamentUser
 
         parent::booted();
 
-        static::deleting(function ($user) {
-            $user->socialiteUsers()->delete();
-        });
-
         static::updating(function ($user) {
             if (
                 $user->isDirty('email_approved') &&

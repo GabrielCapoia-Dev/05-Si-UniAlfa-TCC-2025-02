@@ -10,7 +10,7 @@ class LoginPage extends BaseLogin
 {
 
 
-    protected static string $layout = 'components.layouts.login-page';
+    // protected static string $layout = 'components.layouts.login-page';
 
 
     protected function getFormSchema(): array
