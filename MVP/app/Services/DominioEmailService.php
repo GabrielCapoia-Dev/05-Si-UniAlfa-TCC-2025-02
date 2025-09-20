@@ -48,7 +48,9 @@ class DominioEmailService
 
             $dominiosPermitidos = $this->getAllEmails()->toArray();
 
-            return in_array($dominio, $dominiosPermitidos);
+            $validate = in_array($dominio, $dominiosPermitidos);
+
+            return $validate;
         } catch (\Throwable $e) {
             return false;
         }

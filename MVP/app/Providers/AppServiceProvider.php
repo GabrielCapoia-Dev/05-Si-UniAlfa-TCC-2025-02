@@ -6,6 +6,7 @@ use App\Models\DominioEmail;
 use App\Models\Escola;
 use App\Models\Permission;
 use App\Models\PontosDeParada;
+use App\Models\Aluno;
 use App\Models\Role;
 use App\Models\Serie;
 use App\Models\Turma;
@@ -19,6 +20,7 @@ use App\Policies\RolePolicy;
 use App\Policies\SeriePolicy;
 use App\Policies\TurmaPolicy;
 use App\Policies\UserPolicy;
+use App\Policies\AlunoPolicy;
 use App\Policies\VeiculoPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -47,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Escola::class, EscolaPolicy::class);
         Gate::policy(Veiculo::class, VeiculoPolicy::class);
         Gate::policy(Turma::class, TurmaPolicy::class);
+        Gate::policy(Aluno::class, AlunoPolicy::class);
 
         FilamentAsset::register([
             Css::make('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),
