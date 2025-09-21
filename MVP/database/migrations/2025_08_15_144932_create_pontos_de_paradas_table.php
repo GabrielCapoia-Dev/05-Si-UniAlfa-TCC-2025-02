@@ -18,7 +18,7 @@ return new class extends Migration
             // Localização
             $table->decimal('latitude', 10, 8);
             $table->decimal('longitude', 11, 8);
-            $table->integer('raio')->default(500); // em metros
+            $table->string('raio')->default("500"); // em metros
             
             // Endereço
             $table->string('logradouro');
@@ -27,25 +27,8 @@ return new class extends Migration
             $table->string('uf', 2);
             $table->string('cep', 9);
             
-            // Classificação
-            $table->enum('tipo', [
-                'terminal',
-                'parada_simples', 
-                'ponto_comercial',
-                'ponto_residencial',
-                'ponto_industrial'
-            ])->default('parada_simples');
-            
-            // Status
-            $table->boolean('ativo')->default(true);
-            
             // Timestamps
             $table->timestamps();
-            
-            // Índices para otimização de consultas geográficas
-            $table->index(['latitude', 'longitude']);
-            $table->index(['cidade', 'uf']);
-            $table->index(['ativo', 'tipo']);
         });
     }
 

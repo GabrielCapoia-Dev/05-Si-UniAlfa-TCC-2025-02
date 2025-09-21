@@ -7,25 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-
 class PontosDeParada extends Model
-
 {
-    use HasFactory;
-    use Notifiable;
-    use HasRoles;
+    use HasFactory, Notifiable, HasRoles;
 
-    protected $table = 'pontos_de_paradas';
+    protected $table = 'pontos_de_parada';
 
     protected $fillable = [
         'nome',
+        'descricao',
         'latitude',
         'longitude',
         'raio',
         'logradouro',
         'bairro',
         'cidade',
-        'estado',
+        'uf',
         'cep',
+        'tipo',
+        'ativo',
     ];
 }
