@@ -53,19 +53,19 @@ class AlunoResource extends Resource
                             ->schema([
                                 Forms\Components\Fieldset::make('Foto')
                                     ->schema([
-                                        // Forms\Components\FileUpload::make('foto')
-                                        //     ->label('Upload:')
-                                        //     ->image()
-                                        //     ->loadingIndicatorPosition('left')
-                                        //     ->panelAspectRatio('1.53:1')    
-                                        //     ->panelLayout('integrated')
-                                        //     ->removeUploadedFileButtonPosition('right')
-                                        //     ->uploadButtonPosition('left')
-                                        //     ->uploadProgressIndicatorPosition('left')
-                                        //     ->imageEditorAspectRatios([
-                                        //         '4:3',
-                                        //     ])
-                                        //     ->columnSpan(4),
+                                        Forms\Components\FileUpload::make('foto')
+                                            ->label('Upload:')
+                                            ->image()
+                                            ->loadingIndicatorPosition('left')
+                                            ->panelAspectRatio('1.53:1')    
+                                            ->panelLayout('integrated')
+                                            ->removeUploadedFileButtonPosition('right')
+                                            ->uploadButtonPosition('left')
+                                            ->uploadProgressIndicatorPosition('left')
+                                            ->imageEditorAspectRatios([
+                                                '4:3',
+                                            ])
+                                            ->columnSpan(4),
                                     ]),
                                 Forms\Components\Fieldset::make('Rotas')
                                     ->schema([
