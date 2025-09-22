@@ -90,7 +90,11 @@ class UserResource extends Resource
                         return $query->where('name', '!=', 'Admin');
                     })
                     ->preload()
-                    ->required(),
+                    ->required()
+                    ->disabled(function ($record) {
+                        return $record && $record->hasRole('Admin');
+                    }),
+
 
                 Forms\Components\Toggle::make('email_approved')
                     ->label('Verificação de acesso')
@@ -99,8 +103,13 @@ class UserResource extends Resource
                     ->offColor('danger')
                     ->onIcon('heroicon-s-check')
                     ->offIcon('heroicon-s-x-mark')
+                    ->default(true)
                     ->required()
-                    ->default(true),
+                    ->disabled(function ($record) {
+                        if ($record->hasRole('Admin')) {
+                            return true;
+                        }
+                    }),
 
 
             ]);
@@ -176,14 +185,37 @@ class UserResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before(function ($records, $action) {
+                        if ($records->contains(fn($user) => $user->hasRole('Admin'))) {
+                            $action->halt();
+                        }
+                    })
+                    ->disabled(function ($record) {
+                        if ($record->hasRole('Admin')) {
+                            return true;
+                        }
+                    })
+                    ->visible(function () {
+                        /** @var \App\Models\User|null $user */
+                        $user = Auth::user();
+                        if (!$user) {
+                            return false;
+                        }
+                        return $user->hasRole('Admin');
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
+                        ->before(function ($records, $action) {
+                            if ($records->contains(fn($user) => $user->hasRole('Admin'))) {
+                                $action->halt();
+                            }
+                        })
                         ->visible(function () {
                             /** @var \App\Models\User|null $user */
                             $user = Auth::user();
-
                             if (!$user) {
                                 return false;
                             }

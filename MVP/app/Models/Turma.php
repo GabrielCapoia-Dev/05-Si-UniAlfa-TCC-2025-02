@@ -47,4 +47,9 @@ class Turma extends Model
     {
         return $this->belongsTo(Escola::class, 'id_escola');
     }
+    
+    public function alunos()
+    {
+        return $this->hasMany(Aluno::class, 'id_turma');
+    }
 }

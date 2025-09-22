@@ -22,9 +22,21 @@ class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(function ($record) {
+                    if($record->hasRole('Admin')) {
+                        return false;
+                    }
+                })
+                ->before(function ($record, $action) {
+                    if ($record->hasRole('Admin')) {
+                        $action->halt();
+                        $this->notify('danger', '❌ Não é permitido excluir o usuário Admin.');
+                    }
+                }),
         ];
     }
+
 
     protected function getRedirectUrl(): string
     {
