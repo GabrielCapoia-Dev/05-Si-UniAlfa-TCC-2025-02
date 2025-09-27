@@ -15,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Http;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
@@ -416,11 +417,32 @@ class AlunoResource extends Resource
                         $livewire->dispatch('abrirDetalhesAluno', $record->id);
                     }),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->before(function ($record, Tables\Actions\DeleteAction $action) {
+                        // Pega a instância Livewire da página
+                        $livewire = $action->getLivewire();
+
+                        // Se for a ListAlunos e o card aberto for o mesmo aluno → fecha
+                        if ($livewire instanceof ListAlunos) {
+                            if ($livewire->alunoSelecionado && $livewire->alunoSelecionado->id === $record->id) {
+                                $livewire->fecharDetalhesAluno();
+                            }
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->before(function ($records, Tables\Actions\DeleteBulkAction $action) {
+                            $livewire = $action->getLivewire();
+
+                            if ($livewire instanceof ListAlunos) {
+                                $selectedId = $livewire->alunoSelecionado?->id;
+                                if ($selectedId && $records->contains(fn($r) => $r->id === $selectedId)) {
+                                    $livewire->fecharDetalhesAluno();
+                                }
+                            }
+                        }),
                 ]),
             ])
             ->defaultSort('nome')

@@ -4,11 +4,18 @@
         <div class="md:flex-[0.45] w-full md:w-auto order-1 md:order-none">
             {{ $this->table }}
         </div>
+
         {{-- Painel lateral com detalhes - mais largo --}}
-        <div class="md:flex-[0.55] min-w-0 order-2 md:order-none">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden card-detalhes-aluno">
             <div class="md:sticky md:top-6">
                 @if ($alunoSelecionado)
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                    <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                        {{-- Botão X (sempre no canto superior direito do card) --}}
+                        <button wire:click="fecharDetalhesAluno"
+                            class="absolute top-2 right-2 z-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                            <x-heroicon-o-x-mark class="w-5 h-5" />
+                        </button>
+
                         {{-- Header do Card --}}
                         <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white text-center">
                             <h2 class="text-lg font-semibold">Informações do Aluno</h2>
@@ -25,34 +32,33 @@
                                 {{ $alunoSelecionado->nome }}
                             </h3>
 
-                            <div class="flex flex-col md:flex-row gap-4 h-full">
-                                <div class="mt-2 space-y-1">
-                                    <div
-                                        class="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
-                                        <span>CGM: {{ $alunoSelecionado->cgm ?? 'N/A' }}</span>
-                                    </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-500">
-                                        {{ $alunoSelecionado->sexo }} •
-                                        {{ \Carbon\Carbon::parse($alunoSelecionado->data_nascimento)->format('d/m/Y') }}
-                                    </div>
+                            <div class="mt-2 space-y-1">
+                                <div
+                                    class="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                                    <span>CGM: {{ $alunoSelecionado->cgm ?? 'N/A' }}</span>
                                 </div>
-                                <div class="mt-2 space-y-1">
-                                    @if ($alunoSelecionado->turma)
-                                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                                            {{ $alunoSelecionado->turma->escola->nome ?? '' }}
-                                        </div>
-                                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                                            {{ $alunoSelecionado->turma->serie->nome ?? '' }} -
-                                            {{ $alunoSelecionado->turma->turma ?? '' }}
-                                        </div>
-                                    @endif
+                                <div class="text-xs text-gray-500 dark:text-gray-500">
+                                    {{ $alunoSelecionado->sexo }} •
+                                    {{ \Carbon\Carbon::parse($alunoSelecionado->data_nascimento)->format('d/m/Y') }}
                                 </div>
                             </div>
+
+                            @if ($alunoSelecionado->turma)
+                                <div class="mt-2 space-y-1">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ $alunoSelecionado->turma->escola->nome ?? '' }}
+                                    </div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ $alunoSelecionado->turma->serie->nome ?? '' }} -
+                                        {{ $alunoSelecionado->turma->turma ?? '' }}
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Informações de Contato --}}
                         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-500 mb-3 flex items-center">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
                                 <x-heroicon-o-phone class="w-4 h-4 mr-2" />
                                 Contato
                             </h4>
@@ -70,7 +76,7 @@
 
                         {{-- Informações de Endereço --}}
                         <div class="p-4">
-                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-500 mb-3 flex items-center">
+                            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
                                 <x-heroicon-o-map-pin class="w-4 h-4 mr-2" />
                                 Endereço
                             </h4>
@@ -83,7 +89,38 @@
                 @endif
             </div>
         </div>
-
-
     </div>
+
+    {{-- Script para melhorar a UX --}}
+    @script
+        <script>
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && @js($alunoSelecionado !== null)) {
+                    $wire.fecharDetalhesAluno();
+                }
+            });
+
+            window.addEventListener('error', function(e) {
+                if (e.message && e.message.includes('404')) {
+                    $wire.fecharDetalhesAluno();
+                }
+            });
+
+            window.addEventListener('unhandledrejection', function(event) {
+                if (event.reason && event.reason.status === 404) {
+                    $wire.fecharDetalhesAluno();
+                    event.preventDefault();
+                }
+            });
+
+            // 📌 Fechar ao clicar fora do card
+            document.addEventListener('click', function(event) {
+                const card = document.querySelector('.card-detalhes-aluno'); // classe que vamos atribuir
+                if (card && !card.contains(event.target) && @js($alunoSelecionado !== null)) {
+                    $wire.fecharDetalhesAluno();
+                }
+            });
+        </script>
+    @endscript
+
 </x-filament::page>

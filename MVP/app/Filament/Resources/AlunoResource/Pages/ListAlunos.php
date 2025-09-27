@@ -19,22 +19,33 @@ class ListAlunos extends ListRecords
     public function mount(): void
     {
         parent::mount();
-
     }
 
     public function abrirDetalhesAluno($id): void
     {
-        $this->alunoSelecionado = Aluno::with(['turma.serie', 'turma.escola'])->find($id);
-        
-        // Adiciona um pequeno feedback visual
+        $aluno = Aluno::with(['turma.serie', 'turma.escola'])->find($id);
+
+        if (!$aluno) {
+            $this->fecharDetalhesAluno();
+            return;
+        }
+
+        $this->alunoSelecionado = $aluno;
         $this->dispatch('$refresh');
+    }
+
+    public function fecharDetalhesAluno(): void
+    {
+        $this->alunoSelecionado = null;
     }
 
     protected function getHeaderActions(): array
     {
         return [
             Actions\CreateAction::make()
-                ->label('Novo Aluno'),
+                ->label('Novo Aluno')
+                ->icon('heroicon-o-plus')
+                ->color('primary'),
         ];
     }
 }
