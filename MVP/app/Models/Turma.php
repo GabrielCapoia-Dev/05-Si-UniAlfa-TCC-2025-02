@@ -7,13 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Traits\HasRoles;
 
 class Turma extends Model
 {
     use HasFactory;
     use Notifiable;
-    use HasRoles;
     use LogsActivity;
 
     protected $table = 'turmas';
@@ -47,7 +45,7 @@ class Turma extends Model
     {
         return $this->belongsTo(Escola::class, 'id_escola');
     }
-    
+
     public function alunos()
     {
         return $this->hasMany(Aluno::class, 'id_turma');

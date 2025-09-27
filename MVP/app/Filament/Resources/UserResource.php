@@ -55,7 +55,6 @@ class UserResource extends Resource
     }
 
 
-
     public static function form(Form $form): Form
     {
         return $form
@@ -104,12 +103,37 @@ class UserResource extends Resource
                     ->onIcon('heroicon-s-check')
                     ->offIcon('heroicon-s-x-mark')
                     ->default(true)
-                    ->required()
-                    ->disabled(function ($record) {
+                    ->disabled(function ($record, $context) {
+                        if ($context === 'create') {
+                            return false;
+                        }
+
                         if ($record->hasRole('Admin')) {
                             return true;
                         }
+
+                        return false;
                     }),
+
+                Forms\Components\Section::make('Vínculo com Escola')
+                    ->icon('heroicon-o-identification')
+                    ->description('Aqui mostra se o usuário esta vinculado a uma escola.')
+                    ->schema([
+                        Forms\Components\Select::make('id_escola')
+                            ->label('Escola')
+                            ->relationship('escola', 'nome')
+                            ->preload()
+                            ->searchable(),
+                    ])
+                    ->visible(function () {
+                        /** @var \App\Models\User|null $user */
+                        $user = Auth::user();
+                        if (!$user || $user->hasRole('Admin')) {
+                            return true;
+                        }
+                        return false;
+                    }),
+
 
 
             ]);
@@ -119,6 +143,14 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id_escola')
+                    ->label('Escola')
+                    ->searchable()
+                    ->formatStateUsing(function ($state, $record) {
+                        return $record->escola ? $record->escola->nome : '-';
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome de usuário')
                     ->searchable(),
@@ -126,19 +158,6 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->label('E-mail')
                     ->searchable(),
-
-                Tables\Columns\TextColumn::make('email_verified_at')
-                    ->label('Verificado em')
-                    ->since()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(function ($state, $record) {
-                        if (!$record->email_approved) {
-                            return '--/--/-- --:--:--';
-                        }
-
-                        return $state ? $state->format('d/m/Y H:i:s') : '-';
-                    }),
 
                 Tables\Columns\ToggleColumn::make('email_approved')
                     ->label('Verificação de Acesso')
@@ -165,6 +184,26 @@ class UserResource extends Resource
                     ->onIcon('heroicon-s-check')
                     ->offIcon('heroicon-s-x-mark')
                     ->columnSpan(1),
+
+                Tables\Columns\TextColumn::make('email_verified_at')
+                    ->label('Verificado em')
+                    ->since()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($state, $record) {
+                        if (!$record->email_approved) {
+                            return '--/--/-- --:--:--';
+                        }
+
+                        return $state ? $state->format('d/m/Y H:i:s') : '-';
+                    }),
+
+                Tables\Columns\TextColumn::make('role')
+                    ->label('Nivel de acesso')
+                    ->searchable()
+                    ->sortable()->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
+                    ->toggleable(isToggledHiddenByDefault: false),
+
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
