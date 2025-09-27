@@ -20,9 +20,9 @@ return new class extends Migration
             $table->enum('sexo', ['Masculino', "Feminino"]);
             $table->string('nome_responsavel');
             $table->string('telefone_responsavel');
-            $table->string('telefone_aluno');
+            $table->string('telefone_aluno')->nullable();
             $table->string('foto')->nullable()->unique();
-            $table->string('telefone_alternativo');
+            $table->string('telefone_alternativo')->nullable();
             $table->decimal('latitude')->nullable();
             $table->decimal('longitude')->nullable();
             $table->integer('raio')->nullable();
