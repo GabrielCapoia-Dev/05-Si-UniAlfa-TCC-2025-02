@@ -9,6 +9,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 
 class TurmaResource extends Resource
 {
@@ -49,7 +51,8 @@ class TurmaResource extends Resource
                         $set('turma', $filtrado);
                     })
                     ->dehydrateStateUsing(fn($state) => strtoupper($state ?? ''))
-                    ->rule(fn($get, $record) => 
+                    ->rule(
+                        fn($get, $record) =>
                         "unique:turmas,turma," . ($record?->id ?? 'NULL') . ",id,id_escola,{$get('id_escola')},id_serie,{$get('id_serie')},turno,{$get('turno')}"
                     )
                     ->validationMessages([
@@ -92,6 +95,11 @@ class TurmaResource extends Resource
                     ->label('Turno')
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('alunos_count')
+                    ->label('Qtd. Alunos')
+                    ->counts('alunos')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime()
@@ -120,13 +128,30 @@ class TurmaResource extends Resource
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('viewAlunos')
+                    ->label('Ver Alunos')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn($record) => route('filament.admin.resources.alunos.index', [
+                        'tableFilters' => [
+                            'id_turma' => [
+                                'value' => $record->id,
+                            ],
+                        ],
+                    ])),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteAction::make()
+                    ->before(function ($record, DeleteAction $action) {
+                        if ($record->alunos()->exists()) {
+                            Notification::make()
+                                ->title('Não é possível excluir esta turma.')
+                                ->body('Existem alunos vinculados a ela.')
+                                ->danger()
+                                ->send();
+
+                            $action->cancel();
+                        }
+                    }),
             ]);
     }
 

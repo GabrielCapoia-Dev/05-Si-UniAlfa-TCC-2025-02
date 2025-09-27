@@ -31,7 +31,11 @@ class ManageEscolas extends ManageRecords
                         return false;
                     }
 
-                    return $user->hasGoogleOauth() && $user->hasRole('Admin');
+                    if ($user->hasGoogleOauth() && $user->hasRole('Admin')) {
+                        return true;
+                    }
+
+                    return false;
                 })
                 ->modalHeading('Seletor de Planilhas')
                 ->modalWidth('md')
@@ -52,10 +56,13 @@ class ManageEscolas extends ManageRecords
                         return false;
                     }
 
-                    return $user->hasGoogleOauth() && $user->hasRole('Admin');
+                    if (!$user->hasGoogleOauth() && $user->hasRole('Admin')) {
+                        return true;
+                    }
+
+                    return false;
                 })
-                ->url(route('google.redirect'))
-                ->visible(fn() => !Auth::user()?->google_token),
+                ->url(route('google.redirect')),
 
             Actions\CreateAction::make(),
         ];
