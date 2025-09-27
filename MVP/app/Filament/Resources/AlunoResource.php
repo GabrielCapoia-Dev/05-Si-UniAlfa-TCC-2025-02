@@ -70,7 +70,6 @@ class AlunoResource extends Resource
                                     ->placeholder('Clique ou arraste uma imagem')
                                     ->directory('alunos')
                                     ->disk('public')
-                                    ->required(fn(string $context): bool => $context === 'create')
                                     ->visibility('public')
                                     ->panelAspectRatio('1:1')
                                     ->columnSpan(3)

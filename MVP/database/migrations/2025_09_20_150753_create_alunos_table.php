@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('nome_responsavel');
             $table->string('telefone_responsavel');
             $table->string('telefone_aluno');
-            $table->string('foto')->unique();
+            $table->string('foto')->nullable()->unique();
             $table->string('telefone_alternativo');
             $table->decimal('latitude')->nullable();
             $table->decimal('longitude')->nullable();
