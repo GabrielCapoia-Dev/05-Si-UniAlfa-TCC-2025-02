@@ -70,7 +70,6 @@ class AlunoResource extends Resource
                                     ->placeholder('Clique ou arraste uma imagem')
                                     ->directory('alunos')
                                     ->disk('public')
-                                    ->required(fn(string $context): bool => $context === 'create')
                                     ->visibility('public')
                                     ->panelAspectRatio('1:1')
                                     ->columnSpan(3)
@@ -121,10 +120,8 @@ class AlunoResource extends Resource
                                             ->required(fn(string $context): bool => $context === 'create')
                                             ->label('Telefone Responsalvel:'),
                                         Forms\Components\TextInput::make('telefone_aluno')
-                                            ->required(fn(string $context): bool => $context === 'create')
                                             ->label('Telefone Aluno:'),
                                         Forms\Components\TextInput::make('telefone_alternativo')
-                                            ->required(fn(string $context): bool => $context === 'create')
                                             ->label('Telefone:'),
                                     ]),
 
