@@ -39,7 +39,7 @@ class ManageEscolas extends ManageRecords
                 })
                 ->modalHeading('Seletor de Planilhas')
                 ->modalWidth('md')
-                ->modalContent(fn() => view('filament.modals.drive-files', [
+                ->modalContent(fn() => view('livewire.drive-file', [
                     'modelClass' => static::getModel(),
                 ])),
 
