@@ -62,6 +62,7 @@ class PermissionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Permissão de execução')
@@ -70,30 +71,6 @@ class PermissionResource extends Resource
                     ->label('Criado em')
                     ->dateTime('d/m/Y H:i:s')
                     ->sortable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                // Tables\Actions\EditAction::make(),
-                // Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->visible(function () {
-                            /** @var \App\Models\User|null $user */
-                            $user = Auth::user();
-
-                            // Se não estiver autenticado, esconde
-                            if (!$user) {
-                                return false;
-                            }
-
-                            // Mostra só para Admin
-                            return $user->hasRole('Admin');
-                        }),
-                ])
             ]);
     }
 

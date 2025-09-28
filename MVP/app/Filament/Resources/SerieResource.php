@@ -40,6 +40,7 @@ class SerieResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
             ->columns([
                 Tables\Columns\TextColumn::make('nome')
                     ->label('Nome da Série')

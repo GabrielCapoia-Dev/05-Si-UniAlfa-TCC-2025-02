@@ -158,6 +158,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
             ->checkIfRecordIsSelectableUsing(fn(User $record) => ! $record->hasRole('Admin'))
             ->columns([
                 Tables\Columns\TextColumn::make('id_escola')
@@ -217,7 +218,6 @@ class UserResource extends Resource
 
                 Tables\Columns\TextColumn::make('role')
                     ->label('Nivel de acesso')
-                    ->searchable()
                     ->sortable()->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
                     ->toggleable(isToggledHiddenByDefault: false),
 
@@ -242,15 +242,21 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->before(function ($records, $action) {
-                        if ($records->contains(fn($user) => $user->hasRole('Admin'))) {
+                    ->before(function (User $record, Tables\Actions\DeleteAction $action) {
+                        $authId = Auth::id();
+
+                        if ($record->id === 1) {
+                            $action->failure();
+                            $action->halt();
+                        }
+
+                        if ($record->id === $authId) {
+                            $action->failure();
                             $action->halt();
                         }
                     })
-                    ->disabled(function ($record) {
-                        if ($record->hasRole('Admin')) {
-                            return true;
-                        }
+                    ->disabled(function (User $record) {
+                        return $record->id === 1 || Auth::id() === $record->id;
                     })
                     ->visible(function () {
                         /** @var \App\Models\User|null $user */
