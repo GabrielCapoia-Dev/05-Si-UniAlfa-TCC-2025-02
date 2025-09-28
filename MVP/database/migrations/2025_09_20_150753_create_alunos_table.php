@@ -13,14 +13,16 @@ return new class extends Migration
     {
         Schema::create('alunos', function (Blueprint $table) {
             $table->id();
-            $table->string('nome')->unique();
+            $table->string('nome');
+            $table->foreignId('id_turma')->constrained('turmas')->restrictOnDelete();
             $table->date('data_nascimento');
             $table->string('cgm')->unique();
             $table->enum('sexo', ['Masculino', "Feminino"]);
             $table->string('nome_responsavel');
             $table->string('telefone_responsavel');
-            $table->string('telefone_aluno');
-            $table->string('telefone_alternativo');
+            $table->string('telefone_aluno')->nullable();
+            $table->string('foto')->nullable()->unique();
+            $table->string('telefone_alternativo')->nullable();
             $table->decimal('latitude')->nullable();
             $table->decimal('longitude')->nullable();
             $table->integer('raio')->nullable();
@@ -32,6 +34,8 @@ return new class extends Migration
             $table->string('numero')->nullable();
             $table->string('complemento')->nullable();
             $table->timestamps();
+
+            $table->unique(['id_turma', 'cgm']);
         });
     }
 

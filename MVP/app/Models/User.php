@@ -29,6 +29,7 @@ class User extends Authenticatable implements FilamentUser
      * @var list<string>
      */
     protected $fillable = [
+        'id_escola',
         'name',
         'email',
         'email_approved',
@@ -41,21 +42,11 @@ class User extends Authenticatable implements FilamentUser
         'google_token_expires_in',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -68,7 +59,7 @@ class User extends Authenticatable implements FilamentUser
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'email_verified_at', 'email_approved']);
+            ->logOnly(['id_escola', 'name', 'email', 'email_verified_at', 'email_approved']);
     }
 
     public function canAccessPanel(Panel $panel, ?bool $register = false): bool
@@ -133,5 +124,10 @@ class User extends Authenticatable implements FilamentUser
         return is_null($this->google_token_expires_in)
             ? true
             : now()->greaterThan($this->google_token_expires_in);
+    }
+
+    public function escola()
+    {
+        return $this->belongsTo(Escola::class, 'id_escola');
     }
 }

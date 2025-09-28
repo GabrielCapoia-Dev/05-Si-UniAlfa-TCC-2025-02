@@ -62,6 +62,10 @@ class DominioEmailResource extends Resource
 
                 Toggle::make('status')
                     ->label('Status')
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->onIcon('heroicon-s-check')
+                    ->offIcon('heroicon-s-x-mark')
                     ->default(false),
             ]);
     }
@@ -69,6 +73,7 @@ class DominioEmailResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
             ->columns([
                 TextColumn::make('dominio_email')
                     ->label('Email Dominio')
@@ -80,6 +85,11 @@ class DominioEmailResource extends Resource
                     ->sortable(),
                 ToggleColumn::make('status')
                     ->label('Status')
+                    ->inline(false)
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->onIcon('heroicon-s-check')
+                    ->offIcon('heroicon-s-x-mark')
             ])
             ->filters([
                 //

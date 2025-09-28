@@ -7,25 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Traits\HasRoles;
 
 class Aluno extends Model
 {
 
     use HasFactory;
     use Notifiable;
-    use HasRoles;
     use LogsActivity;
 
     protected $table = 'alunos';
 
     protected $fillable = [
-        // 'id_serie',
-        // 'id_escola',
+        'id_turma',
         'nome',
         'data_nascimento',
         'cgm',
         'sexo',
+        'foto',
         'nome_responsavel',
         'telefone_responsavel',
         'telefone_aluno',
@@ -47,8 +45,7 @@ class Aluno extends Model
     {
         return LogOptions::defaults()
             ->logOnly([
-                // 'id_serie',
-                // 'id_escola',
+                'id_turma',
                 'nome',
                 'data_nascimento',
                 'cgm',
@@ -70,14 +67,8 @@ class Aluno extends Model
             ]);
     }
 
-
-    // public function serie()
-    // {
-    //     return $this->belongsTo(Serie::class, 'id_serie');
-    // }
-
-    // public function escola()
-    // {
-    //     return $this->belongsTo(Escola::class, 'id_escola');
-    // }
+    public function turma()
+    {
+        return $this->belongsTo(Turma::class, 'id_turma');
+    }
 }

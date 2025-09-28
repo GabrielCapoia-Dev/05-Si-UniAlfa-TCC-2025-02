@@ -55,7 +55,6 @@ class AppServiceProvider extends ServiceProvider
             Css::make('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),
             Js::make('leaflet-js',  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'),
         ]);
-
         Gate::define('admin-only', function ($user) {
             return $user->hasRole('Admin');
         });

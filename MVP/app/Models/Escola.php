@@ -7,9 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Spatie\SimpleExcel\SimpleExcelWriter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -17,7 +15,6 @@ class Escola extends Model
 {
     use HasFactory;
     use Notifiable;
-    use HasRoles;
     use LogsActivity;
 
     protected $table = 'escolas';
@@ -35,7 +32,6 @@ class Escola extends Model
         'numero',
         'complemento'
     ];
-
 
     private static function inferFieldFromMessage(string $msg): ?string
     {
@@ -60,7 +56,6 @@ class Escola extends Model
         return 'invalid';
     }
 
-
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -80,6 +75,11 @@ class Escola extends Model
     public function turmas()
     {
         return $this->hasMany(Turma::class);
+    }
+
+    public function users()
+    {
+        return $this->hasMany(User::class, 'id_escola');
     }
 
     public function validateGoogleSheet(string $fileId): void
