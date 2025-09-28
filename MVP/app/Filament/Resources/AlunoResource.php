@@ -17,7 +17,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Auth;
 
 class AlunoResource extends Resource
 {
@@ -218,15 +218,26 @@ class AlunoResource extends Resource
                                             ->schema([
                                                 Forms\Components\Select::make('id_escola')
                                                     ->label('Escola')
-                                                    ->options(Escola::pluck('nome', 'id'))
+                                                    ->options(fn() => Escola::pluck('nome', 'id'))
+                                                    ->searchable()
+                                                    ->reactive()
+                                                    ->required()
                                                     ->afterStateHydrated(function (Forms\Components\Select $component, $state, $record) {
-                                                        if ($record && $record->turma) {
+                                                        if ($record?->turma) {
                                                             $component->state($record->turma->id_escola);
                                                         }
                                                     })
-                                                    ->searchable()
-                                                    ->required()
-                                                    ->reactive(),
+                                                    ->default(fn() => Auth::user()?->id_escola)
+                                                    ->dehydrated(true)
+                                                    ->disabled(function () {
+
+                                                        /** @var \App\Models\User */
+                                                        $user = Auth::user();
+                                                        return $user?->hasRole('Admin') ? false : true;
+                                                    })
+                                                    ->afterStateUpdated(function ($state, callable $set) {
+                                                        $set('id_turma', null);
+                                                    }),
 
                                                 Forms\Components\Select::make('id_turma')
                                                     ->label('Turma')
@@ -241,16 +252,15 @@ class AlunoResource extends Resource
                                                             ->with('serie')
                                                             ->get()
                                                             ->mapWithKeys(fn($turma) => [
-                                                                $turma->id => "{$turma->serie->nome} - {$turma->turma}"
+                                                                $turma->id => "{$turma->serie->nome} - {$turma->turma}",
                                                             ]);
                                                     })
                                                     ->default(fn($record) => $record?->id_turma)
                                                     ->searchable()
                                                     ->required()
-                                                    ->disabled(
-                                                        fn(callable $get, string $context) =>
-                                                        $context === 'create' && blank($get('id_escola'))
-                                                    )
+                                                    ->dehydrated(true)
+                                                    ->reactive()
+                                                    ->disabled(fn(callable $get) => blank($get('id_escola')))
                                                     ->placeholder('Selecione a escola primeiro'),
                                             ]),
                                     ])
@@ -265,6 +275,7 @@ class AlunoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
             ->columns([
                 Tables\Columns\TextColumn::make('nome')
                     ->label('Nome')

@@ -7,14 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Traits\HasRoles;
 
 class Aluno extends Model
 {
 
     use HasFactory;
     use Notifiable;
-    use HasRoles;
     use LogsActivity;
 
     protected $table = 'alunos';

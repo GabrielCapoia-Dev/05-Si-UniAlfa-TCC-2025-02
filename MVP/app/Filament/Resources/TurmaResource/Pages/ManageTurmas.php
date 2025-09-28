@@ -7,6 +7,8 @@ use App\Models\Escola;
 use App\Models\Serie;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class ManageTurmas extends ManageRecords
 {
@@ -42,5 +44,33 @@ class ManageTurmas extends ManageRecords
         }
 
         return $actions;
+    }
+
+    protected function getTableQuery(): Builder
+    {
+        $query = static::getResource()::getEloquentQuery()
+            ->with(['escola', 'serie']); // ajuste os withs que quiser
+
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if ($user && (!$user->hasRole('Admin')) && !empty($user->id_escola)) {
+            $query->where($query->getModel()->getTable() . '.id_escola', $user->id_escola);
+        }
+
+        return $query;
+    }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        /** @var \App\Models\User|null $auth */
+        $auth = Auth::user();
+
+        // Se não for Admin e tiver escola, força o vínculo da turma à escola do criador.
+        if ($auth && !$auth->hasRole('Admin') && !empty($auth->id_escola)) {
+            $data['id_escola'] = $auth->id_escola;
+        }
+
+        return $data;
     }
 }

@@ -55,7 +55,6 @@ class UserResource extends Resource
     }
 
 
-
     public static function form(Form $form): Form
     {
         return $form
@@ -91,8 +90,15 @@ class UserResource extends Resource
                     })
                     ->preload()
                     ->required()
-                    ->disabled(function ($record) {
-                        return $record && $record->hasRole('Admin');
+                    ->disabled(function ($context, $record) {
+                        if ($context === 'create') {
+                            return false;
+                        }
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return true;
+                        }
+
+                        return false;
                     }),
 
 
@@ -104,12 +110,46 @@ class UserResource extends Resource
                     ->onIcon('heroicon-s-check')
                     ->offIcon('heroicon-s-x-mark')
                     ->default(true)
-                    ->required()
-                    ->disabled(function ($record) {
-                        if ($record->hasRole('Admin')) {
+                    ->visible(function ($record, $context) {
+                        if ($context === 'create') {
                             return true;
                         }
+
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return false;
+                        }
+
+                        return true;
                     }),
+
+                Forms\Components\Section::make('Vínculo com Escola')
+                    ->icon('heroicon-o-identification')
+                    ->description('Aqui mostra se o usuário esta vinculado a uma escola.')
+                    ->schema([
+                        Forms\Components\Select::make('id_escola')
+                            ->label('Escola')
+                            ->relationship('escola', 'nome')
+                            ->preload()
+                            ->searchable(),
+                    ])
+                    ->visible(function ($record, $context) {
+
+                        if ($context === 'create') {
+                            return true;
+                        }
+                        if ($context === 'edit') {
+                            if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                                return false;
+                            }
+                            return true;
+                        }
+
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return false;
+                        }
+                        return false;
+                    }),
+
 
 
             ]);
@@ -118,7 +158,17 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
+            ->checkIfRecordIsSelectableUsing(fn(User $record) => ! $record->hasRole('Admin'))
             ->columns([
+                Tables\Columns\TextColumn::make('id_escola')
+                    ->label('Escola')
+                    ->searchable()
+                    ->formatStateUsing(function ($state, $record) {
+                        return $record->escola ? $record->escola->nome : '-';
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome de usuário')
                     ->searchable(),
@@ -126,19 +176,6 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->label('E-mail')
                     ->searchable(),
-
-                Tables\Columns\TextColumn::make('email_verified_at')
-                    ->label('Verificado em')
-                    ->since()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(function ($state, $record) {
-                        if (!$record->email_approved) {
-                            return '--/--/-- --:--:--';
-                        }
-
-                        return $state ? $state->format('d/m/Y H:i:s') : '-';
-                    }),
 
                 Tables\Columns\ToggleColumn::make('email_approved')
                     ->label('Verificação de Acesso')
@@ -166,6 +203,25 @@ class UserResource extends Resource
                     ->offIcon('heroicon-s-x-mark')
                     ->columnSpan(1),
 
+                Tables\Columns\TextColumn::make('email_verified_at')
+                    ->label('Verificado em')
+                    ->since()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($state, $record) {
+                        if (!$record->email_approved) {
+                            return '--/--/-- --:--:--';
+                        }
+
+                        return $state ? $state->format('d/m/Y H:i:s') : '-';
+                    }),
+
+                Tables\Columns\TextColumn::make('role')
+                    ->label('Nivel de acesso')
+                    ->sortable()->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
+                    ->toggleable(isToggledHiddenByDefault: false),
+
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->since()
@@ -186,15 +242,21 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->before(function ($records, $action) {
-                        if ($records->contains(fn($user) => $user->hasRole('Admin'))) {
+                    ->before(function (User $record, Tables\Actions\DeleteAction $action) {
+                        $authId = Auth::id();
+
+                        if ($record->id === 1) {
+                            $action->failure();
+                            $action->halt();
+                        }
+
+                        if ($record->id === $authId) {
+                            $action->failure();
                             $action->halt();
                         }
                     })
-                    ->disabled(function ($record) {
-                        if ($record->hasRole('Admin')) {
-                            return true;
-                        }
+                    ->disabled(function (User $record) {
+                        return $record->id === 1 || Auth::id() === $record->id;
                     })
                     ->visible(function () {
                         /** @var \App\Models\User|null $user */
