@@ -6,6 +6,8 @@ use App\Filament\Resources\AlunoResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use App\Models\Aluno;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class ListAlunos extends ListRecords
 {
@@ -42,10 +44,24 @@ class ListAlunos extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->label('Novo Aluno')
-                ->icon('heroicon-o-plus')
-                ->color('primary'),
+            Actions\CreateAction::make(),
         ];
+    }
+
+    protected function getTableQuery(): Builder
+    {
+        $query = static::getResource()::getEloquentQuery()
+            ->with(['turma.escola', 'turma.serie']); // ajuste os withs
+
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if ($user && (!$user->hasRole('Admin')) && !empty($user->id_escola)) {
+            $query->whereHas('turma', function (Builder $t) use ($user) {
+                $t->where($t->getModel()->getTable() . '.id_escola', $user->id_escola);
+            });
+        }
+
+        return $query;
     }
 }

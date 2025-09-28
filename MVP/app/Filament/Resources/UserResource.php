@@ -90,8 +90,15 @@ class UserResource extends Resource
                     })
                     ->preload()
                     ->required()
-                    ->disabled(function ($record) {
-                        return $record && $record->hasRole('Admin');
+                    ->disabled(function ($context, $record) {
+                        if ($context === 'create') {
+                            return false;
+                        }
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return true;
+                        }
+
+                        return false;
                     }),
 
 
@@ -103,16 +110,16 @@ class UserResource extends Resource
                     ->onIcon('heroicon-s-check')
                     ->offIcon('heroicon-s-x-mark')
                     ->default(true)
-                    ->disabled(function ($record, $context) {
+                    ->visible(function ($record, $context) {
                         if ($context === 'create') {
-                            return false;
-                        }
-
-                        if ($record->hasRole('Admin')) {
                             return true;
                         }
 
-                        return false;
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return false;
+                        }
+
+                        return true;
                     }),
 
                 Forms\Components\Section::make('Vínculo com Escola')
@@ -125,11 +132,20 @@ class UserResource extends Resource
                             ->preload()
                             ->searchable(),
                     ])
-                    ->visible(function () {
-                        /** @var \App\Models\User|null $user */
-                        $user = Auth::user();
-                        if (!$user || $user->hasRole('Admin')) {
+                    ->visible(function ($record, $context) {
+
+                        if ($context === 'create') {
                             return true;
+                        }
+                        if ($context === 'edit') {
+                            if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                                return false;
+                            }
+                            return true;
+                        }
+
+                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
+                            return false;
                         }
                         return false;
                     }),
@@ -142,6 +158,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->checkIfRecordIsSelectableUsing(fn(User $record) => ! $record->hasRole('Admin'))
             ->columns([
                 Tables\Columns\TextColumn::make('id_escola')
                     ->label('Escola')

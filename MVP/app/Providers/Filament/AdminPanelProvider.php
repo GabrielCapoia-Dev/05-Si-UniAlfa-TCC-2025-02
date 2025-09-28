@@ -35,6 +35,12 @@ class AdminPanelProvider extends PanelProvider
                         ->name('exportar-modelo');
                 });
 
+
+                Route::get('/boom', function () {
+                    throw new \Exception('Forçando erro 500 para testes');
+                });
+
+
                 Route::get('/password-reset', PasswordReset::class);
             })
             ->default()

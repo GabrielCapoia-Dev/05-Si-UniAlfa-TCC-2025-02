@@ -11,6 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class TurmaResource extends Resource
 {
@@ -32,7 +33,17 @@ class TurmaResource extends Resource
                     ->relationship('escola', 'nome')
                     ->required()
                     ->preload()
-                    ->searchable(),
+                    ->searchable()
+                    ->default(fn() => Auth::user()?->id_escola)
+                    ->dehydrated(true)
+                    ->disabled(function () {
+
+                        /** @var \App\Models\User */
+                        $user = Auth::user();
+                        if ($user?->hasRole('Admin')) return false;
+
+                        return true;
+                    }),
 
                 Forms\Components\Select::make('id_serie')
                     ->label('Série')
@@ -66,6 +77,7 @@ class TurmaResource extends Resource
                     ->options([
                         'Manhã' => 'Manhã',
                         'Tarde' => 'Tarde',
+                        'Noite' => 'Noite',
                         'Integral' => 'Integral',
                     ])
                     ->required(),
