@@ -13,40 +13,46 @@
             font-family: Arial, sans-serif;
             background-color: #f5f5f5;
         }
+
         h1 {
             text-align: center;
             padding: 15px;
             margin: 0 0 20px 0;
             background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 300px 1fr 350px;
             gap: 20px;
         }
+
         .sidebar {
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             height: fit-content;
         }
-        .info-section {
+
+        .info-panel {
             background: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            height: fit-content;
         }
+
         #map {
             height: 600px;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
+
         .info-item {
             margin: 10px 0;
             padding: 10px;
@@ -54,17 +60,26 @@
             border-radius: 4px;
             border-left: 4px solid #2196F3;
         }
+
         .info-item label {
             font-weight: bold;
             color: #333;
             display: block;
             margin-bottom: 5px;
         }
+
         .info-item .value {
             font-size: 1.1em;
             color: #666;
         }
-        input[type="time"], input[type="text"], input[type="number"] {
+
+        .fuel-item {
+            border-left-color: #FF9800;
+        }
+
+        input[type="time"],
+        input[type="text"],
+        input[type="number"] {
             width: 100%;
             padding: 8px;
             margin: 5px 0;
@@ -72,6 +87,7 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+
         button {
             width: 100%;
             padding: 10px;
@@ -83,25 +99,31 @@
             cursor: pointer;
             font-size: 1em;
         }
+
         button:hover {
             background: #1976D2;
         }
+
         .add-point {
             background: #4CAF50;
         }
+
         .add-point:hover {
             background: #45a049;
         }
+
         h3 {
             margin-top: 0;
             color: #333;
             border-bottom: 2px solid #2196F3;
             padding-bottom: 10px;
         }
+
         .point-list {
             max-height: 300px;
             overflow-y: auto;
         }
+
         .point-item {
             padding: 8px;
             margin: 5px 0;
@@ -111,6 +133,7 @@
             justify-content: space-between;
             align-items: center;
         }
+
         .remove-btn {
             background: #f44336;
             color: white;
@@ -121,15 +144,18 @@
             width: auto;
             margin: 0;
         }
+
         .remove-btn:hover {
             background: #d32f2f;
         }
+
         .mode-selector {
             display: flex;
             gap: 10px;
             margin: 15px 0;
             flex-wrap: wrap;
         }
+
         .mode-btn {
             flex: 1;
             min-width: 80px;
@@ -141,28 +167,34 @@
             text-align: center;
             transition: all 0.3s;
         }
+
         .mode-btn:hover {
             border-color: #2196F3;
             background: #f0f8ff;
         }
+
         .mode-btn.active {
             border-color: #2196F3;
             background: #2196F3;
             color: white;
             font-weight: bold;
         }
+
         .mode-btn.active-parada {
             border-color: #2196F3;
             background: #2196F3;
         }
+
         .mode-btn.active-escola {
             border-color: #F44336;
             background: #F44336;
         }
+
         .mode-btn.active-aluno {
             border-color: #4CAF50;
             background: #4CAF50;
         }
+
         .status-msg {
             padding: 10px;
             background: #fff3cd;
@@ -173,20 +205,27 @@
             font-weight: bold;
             display: none;
         }
+
         .status-msg.show {
             display: block;
+        }
+
+        .highlight-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #FF9800;
         }
     </style>
 </head>
 
 <body>
     <h1>Teste Rota 1 - Sistema de Rotas Escolares</h1>
-    
+
     <div class="container">
         <div class="sidebar">
             <h3>Modo de Adição</h3>
             <div class="status-msg" id="statusMsg">Clique no mapa para adicionar o ponto</div>
-            
+
             <div class="mode-selector">
                 <div class="mode-btn" onclick="setMode('parada')" id="btn-parada">
                     🚏 Parada
@@ -198,69 +237,74 @@
                     👨‍🎓 Aluno
                 </div>
             </div>
-            
+
             <button onclick="desativarModo()">Desativar Modo de Adição</button>
-            
-            <h3>Adicionar Manualmente</h3>
-            <label>Tipo:</label>
-            <select id="newPointType">
-                <option value="parada">Ponto de Parada</option>
-                <option value="escola">Escola</option>
-                <option value="aluno">Aluno</option>
-            </select>
-            
-            <label>Nome:</label>
-            <input type="text" id="newPointName" placeholder="Ex: Ponto G">
-            
-            <label>Latitude:</label>
-            <input type="number" id="newPointLat" step="0.000001" placeholder="-23.766900">
-            
-            <label>Longitude:</label>
-            <input type="number" id="newPointLng" step="0.000001" placeholder="-53.312000">
-            
-            <button class="add-point" onclick="adicionarPonto()">Adicionar Ponto</button>
-            
+
             <h3>Pontos na Rota</h3>
             <div class="point-list" id="pointList"></div>
-            
+
             <button onclick="recalcularRota()">Recalcular Rota</button>
-            
-            <div class="info-section">
+
+            <div style="margin-top: 20px;">
                 <h3>Horário de Saída</h3>
                 <label>Hora de partida:</label>
                 <input type="time" id="departureTime" value="07:00" onchange="calcularHorarios()">
             </div>
+
+            <div style="margin-top: 20px;">
+                <h3>Consumo do Veículo</h3>
+                <label>Km por Litro:</label>
+                <input type="number" id="fuelConsumption" value="10" min="1" max="50" step="0.1" onchange="calcularCombustivel()">
+                <small style="color: #666; display: block; margin-top: 5px;">Ex: 10 km/L</small>
+                
+                <label style="margin-top: 15px;">Preço do Combustível (R$):</label>
+                <input type="number" id="fuelPrice" value="5.50" min="0" step="0.01" onchange="calcularCombustivel()">
+            </div>
         </div>
-        
+
         <div>
             <div id="map"></div>
-            
-            <div class="info-section">
-                <h3>Informações da Rota</h3>
-                <div class="info-item">
-                    <label>Distância Total:</label>
-                    <div class="value" id="distanciaTotal">Calculando...</div>
-                </div>
-                <div class="info-item">
-                    <label>Tempo Estimado:</label>
-                    <div class="value" id="tempoEstimado">Calculando...</div>
-                </div>
-                <div class="info-item">
-                    <label>Horário de Saída:</label>
-                    <div class="value" id="horarioSaida">07:00</div>
-                </div>
-                <div class="info-item">
-                    <label>Horário de Chegada Estimado:</label>
-                    <div class="value" id="horarioChegada">Calculando...</div>
-                </div>
-                <div class="info-item">
-                    <label>Número de Paradas:</label>
-                    <div class="value" id="numParadas">6</div>
-                </div>
-                <div class="info-item">
-                    <label>Número de Alunos:</label>
-                    <div class="value" id="numAlunos">18</div>
-                </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>Informações da Rota</h3>
+            <div class="info-item">
+                <label>Distância Total:</label>
+                <div class="value" id="distanciaTotal">Calculando...</div>
+            </div>
+            <div class="info-item">
+                <label>Tempo Estimado:</label>
+                <div class="value" id="tempoEstimado">Calculando...</div>
+            </div>
+            <div class="info-item">
+                <label>Horário de Saída:</label>
+                <div class="value" id="horarioSaida">07:00</div>
+            </div>
+            <div class="info-item">
+                <label>Horário de Chegada:</label>
+                <div class="value" id="horarioChegada">Calculando...</div>
+            </div>
+            <div class="info-item">
+                <label>Número de Paradas:</label>
+                <div class="value" id="numParadas">6</div>
+            </div>
+            <div class="info-item">
+                <label>Número de Alunos:</label>
+                <div class="value" id="numAlunos">18</div>
+            </div>
+
+            <h3 style="margin-top: 25px; border-bottom-color: #FF9800;">Custo de Combustível</h3>
+            <div class="info-item fuel-item">
+                <label>Litros Necessários:</label>
+                <div class="value" id="litrosNecessarios">Calculando...</div>
+            </div>
+            <div class="info-item fuel-item">
+                <label>Custo da Rota:</label>
+                <div class="value highlight-value" id="custoRota">Calculando...</div>
+            </div>
+            <div class="info-item fuel-item">
+                <label>Consumo Médio:</label>
+                <div class="value" id="consumoMedio">10.0 km/L</div>
             </div>
         </div>
     </div>
@@ -295,26 +339,71 @@
             })
         };
 
-        let pontosPrincipais = [
-            { lat: -23.756000, lng: -53.325000, type: 'parada', label: 'Ponto A - Norte Oeste' },
-            { lat: -23.758500, lng: -53.305000, type: 'parada', label: 'Ponto B - Norte Leste' },
-            { lat: -23.768000, lng: -53.300000, type: 'parada', label: 'Ponto C - Leste' },
-            { lat: -23.778000, lng: -53.310000, type: 'parada', label: 'Ponto D - Sul Leste' },
-            { lat: -23.775000, lng: -53.325000, type: 'parada', label: 'Ponto E - Sul' },
-            { lat: -23.762000, lng: -53.328000, type: 'parada', label: 'Ponto F - Oeste' },
-            { lat: -23.766900, lng: -53.312000, type: 'escola', label: 'Escola Central' },
-            { lat: -23.770000, lng: -53.320000, type: 'escola', label: 'Escola Municipal' }
+        let pontosPrincipais = [{
+                lat: -23.756000,
+                lng: -53.325000,
+                type: 'parada',
+                label: 'Ponto A - Norte Oeste'
+            },
+            {
+                lat: -23.758500,
+                lng: -53.305000,
+                type: 'parada',
+                label: 'Ponto B - Norte Leste'
+            },
+            {
+                lat: -23.768000,
+                lng: -53.300000,
+                type: 'parada',
+                label: 'Ponto C - Leste'
+            },
+            {
+                lat: -23.778000,
+                lng: -53.310000,
+                type: 'parada',
+                label: 'Ponto D - Sul Leste'
+            },
+            {
+                lat: -23.775000,
+                lng: -53.325000,
+                type: 'parada',
+                label: 'Ponto E - Sul'
+            },
+            {
+                lat: -23.762000,
+                lng: -53.328000,
+                type: 'parada',
+                label: 'Ponto F - Oeste'
+            },
+            {
+                lat: -23.766900,
+                lng: -53.312000,
+                type: 'escola',
+                label: 'Escola Central'
+            },
+            {
+                lat: -23.770000,
+                lng: -53.320000,
+                type: 'escola',
+                label: 'Escola Municipal'
+            }
         ];
 
         let alunos = [];
         let markers = [];
         let circles = [];
         let routingControl = null;
-        let routeInfo = { distance: 0, time: 0 };
-        let addMode = null; // 'parada', 'escola', 'aluno' ou null
-        let pontoCounter = { parada: 7, escola: 3, aluno: 1 };
+        let routeInfo = {
+            distance: 0,
+            time: 0
+        };
+        let addMode = null;
+        let pontoCounter = {
+            parada: 7,
+            escola: 3,
+            aluno: 1
+        };
 
-        // Configura o clique no mapa
         map.on('click', function(e) {
             if (addMode) {
                 adicionarPontoNoMapa(e.latlng.lat, e.latlng.lng);
@@ -323,22 +412,14 @@
 
         function setMode(mode) {
             addMode = mode;
-            
-            // Remove classe active de todos
             document.querySelectorAll('.mode-btn').forEach(btn => {
                 btn.classList.remove('active', 'active-parada', 'active-escola', 'active-aluno');
             });
-            
-            // Adiciona classe active no selecionado
             const btn = document.getElementById(`btn-${mode}`);
             btn.classList.add('active', `active-${mode}`);
-            
-            // Mostra mensagem
             const statusMsg = document.getElementById('statusMsg');
             statusMsg.textContent = `Clique no mapa para adicionar ${mode === 'parada' ? 'uma parada' : mode === 'escola' ? 'uma escola' : 'um aluno'}`;
             statusMsg.classList.add('show');
-            
-            // Muda cursor do mapa
             document.getElementById('map').style.cursor = 'crosshair';
         }
 
@@ -353,7 +434,7 @@
 
         function adicionarPontoNoMapa(lat, lng) {
             if (!addMode) return;
-            
+
             let label = '';
             if (addMode === 'parada') {
                 label = `Ponto ${String.fromCharCode(64 + pontoCounter.parada)}`;
@@ -365,17 +446,15 @@
                 label = `Aluno ${pontoCounter.aluno}`;
                 pontoCounter.aluno++;
             }
-            
+
             pontosPrincipais.push({
                 lat: lat,
                 lng: lng,
                 type: addMode,
                 label: label
             });
-            
+
             desenharMapa();
-            
-            // Mantém o modo ativo para adicionar mais pontos
             const statusMsg = document.getElementById('statusMsg');
             statusMsg.textContent = `${label} adicionado! Clique novamente para adicionar mais.`;
         }
@@ -384,11 +463,22 @@
             alunos = [];
             pontosPrincipais.forEach(p => {
                 if (p.type === 'parada') {
-                    alunos.push(
-                        { lat: p.lat + 0.0012, lng: p.lng + 0.0008, type: 'aluno', label: `Aluno 1 - ${p.label}` },
-                        { lat: p.lat - 0.0010, lng: p.lng - 0.0006, type: 'aluno', label: `Aluno 2 - ${p.label}` },
-                        { lat: p.lat + 0.0008, lng: p.lng - 0.0010, type: 'aluno', label: `Aluno 3 - ${p.label}` }
-                    );
+                    alunos.push({
+                        lat: p.lat + 0.0012,
+                        lng: p.lng + 0.0008,
+                        type: 'aluno',
+                        label: `Aluno 1 - ${p.label}`
+                    }, {
+                        lat: p.lat - 0.0010,
+                        lng: p.lng - 0.0006,
+                        type: 'aluno',
+                        label: `Aluno 2 - ${p.label}`
+                    }, {
+                        lat: p.lat + 0.0008,
+                        lng: p.lng - 0.0010,
+                        type: 'aluno',
+                        label: `Aluno 3 - ${p.label}`
+                    });
                 }
             });
         }
@@ -407,10 +497,9 @@
         function desenharMapa() {
             limparMapa();
             gerarAlunos();
-            
+
             const stops = [...pontosPrincipais, ...alunos];
-            
-            // Adiciona círculos
+
             pontosPrincipais.forEach(p => {
                 let circle;
                 if (p.type === 'parada') {
@@ -433,27 +522,30 @@
                 if (circle) circles.push(circle);
             });
 
-            // Adiciona marcadores
             stops.forEach(stop => {
-                const marker = L.marker([stop.lat, stop.lng], { icon: icons[stop.type] })
+                const marker = L.marker([stop.lat, stop.lng], {
+                        icon: icons[stop.type]
+                    })
                     .addTo(map)
                     .bindPopup(`<b>${stop.label}</b><br>Lat: ${stop.lat.toFixed(6)}<br>Lng: ${stop.lng.toFixed(6)}`);
                 markers.push(marker);
             });
 
-            // Cria waypoints para rota
             const waypoints = pontosPrincipais
                 .filter(p => p.type === 'parada' || p.type === 'escola')
                 .map(p => L.latLng(p.lat, p.lng));
 
-            // Cria rota
             routingControl = L.Routing.control({
                 waypoints: waypoints,
                 router: L.Routing.osrmv1({
                     serviceUrl: 'https://router.project-osrm.org/route/v1'
                 }),
                 lineOptions: {
-                    styles: [{ color: '#ff0707ff', opacity: 0.8, weight: 5 }]
+                    styles: [{
+                        color: '#ff0707ff',
+                        opacity: 0.8,
+                        weight: 5
+                    }]
                 },
                 show: false,
                 addWaypoints: false,
@@ -463,7 +555,6 @@
             }).addTo(map);
 
             routingControl.on('routesfound', function(e) {
-                console.log(e);
                 const routes = e.routes;
                 const summary = routes[0].summary;
                 routeInfo.distance = (summary.totalDistance / 1000).toFixed(2);
@@ -479,12 +570,13 @@
             document.getElementById('distanciaTotal').textContent = `${routeInfo.distance} km`;
             document.getElementById('tempoEstimado').textContent = `${routeInfo.time} minutos`;
             calcularHorarios();
+            calcularCombustivel();
         }
 
         function calcularHorarios() {
             const horarioSaida = document.getElementById('departureTime').value;
             document.getElementById('horarioSaida').textContent = horarioSaida;
-            
+
             if (routeInfo.time > 0) {
                 const [horas, minutos] = horarioSaida.split(':').map(Number);
                 const totalMinutos = horas * 60 + minutos + routeInfo.time;
@@ -492,6 +584,25 @@
                 const minutosChegada = totalMinutos % 60;
                 const horarioChegada = `${String(horasChegada).padStart(2, '0')}:${String(minutosChegada).padStart(2, '0')}`;
                 document.getElementById('horarioChegada').textContent = horarioChegada;
+            }
+        }
+
+        function calcularCombustivel() {
+            const kmPorLitro = parseFloat(document.getElementById('fuelConsumption').value) || 10;
+            const precoCombustivel = parseFloat(document.getElementById('fuelPrice').value) || 5.50;
+            const distancia = parseFloat(routeInfo.distance) || 0;
+
+            if (distancia > 0) {
+                const litrosNecessarios = distancia / kmPorLitro;
+                const custoTotal = litrosNecessarios * precoCombustivel;
+
+                document.getElementById('litrosNecessarios').textContent = `${litrosNecessarios.toFixed(2)} L`;
+                document.getElementById('custoRota').textContent = `R$ ${custoTotal.toFixed(2)}`;
+                document.getElementById('consumoMedio').textContent = `${kmPorLitro.toFixed(1)} km/L`;
+            } else {
+                document.getElementById('litrosNecessarios').textContent = 'Calculando...';
+                document.getElementById('custoRota').textContent = 'Calculando...';
+                document.getElementById('consumoMedio').textContent = `${kmPorLitro.toFixed(1)} km/L`;
             }
         }
 
@@ -516,26 +627,6 @@
             });
         }
 
-        function adicionarPonto() {
-            const type = document.getElementById('newPointType').value;
-            const label = document.getElementById('newPointName').value;
-            const lat = parseFloat(document.getElementById('newPointLat').value);
-            const lng = parseFloat(document.getElementById('newPointLng').value);
-
-            if (!label || isNaN(lat) || isNaN(lng)) {
-                alert('Por favor, preencha todos os campos corretamente!');
-                return;
-            }
-
-            pontosPrincipais.push({ lat, lng, type, label });
-            desenharMapa();
-
-            // Limpa campos
-            document.getElementById('newPointName').value = '';
-            document.getElementById('newPointLat').value = '';
-            document.getElementById('newPointLng').value = '';
-        }
-
         function removerPonto(index) {
             pontosPrincipais.splice(index, 1);
             desenharMapa();
@@ -545,7 +636,6 @@
             desenharMapa();
         }
 
-        // Inicializa o mapa
         desenharMapa();
     </script>
 </body>
