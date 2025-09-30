@@ -89,13 +89,10 @@ class RoleResource extends Resource
                         ->visible(function () {
                             /** @var \App\Models\User|null $user */
                             $user = Auth::user();
-
-                            // Se não estiver autenticado, esconde
                             if (!$user) {
                                 return false;
                             }
 
-                            // Mostra só para Admin
                             return $user->hasRole('Admin');
                         }),
                 ])

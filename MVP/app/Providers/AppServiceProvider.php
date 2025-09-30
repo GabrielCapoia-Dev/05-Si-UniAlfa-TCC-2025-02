@@ -10,7 +10,6 @@ use App\Models\Role;
 use App\Models\Serie;
 use App\Models\Turma;
 use App\Models\User;
-use App\Models\Veiculo;
 use App\Policies\DominioEmailPolicy;
 use App\Policies\EscolaPolicy;
 use App\Policies\PermissionPolicy;
@@ -19,7 +18,6 @@ use App\Policies\SeriePolicy;
 use App\Policies\TurmaPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\AlunoPolicy;
-use App\Policies\VeiculoPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Filament\Support\Assets\Css;
@@ -44,7 +42,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(DominioEmail::class, DominioEmailPolicy::class);
         Gate::policy(Serie::class, SeriePolicy::class);
         Gate::policy(Escola::class, EscolaPolicy::class);
-        Gate::policy(Veiculo::class, VeiculoPolicy::class);
         Gate::policy(Turma::class, TurmaPolicy::class);
         Gate::policy(Aluno::class, AlunoPolicy::class);
 

@@ -33,29 +33,6 @@ class Escola extends Model
         'complemento'
     ];
 
-    private static function inferFieldFromMessage(string $msg): ?string
-    {
-        if (preg_match('/campo\s+([^\s\.\:]+)/iu', $msg, $m)) {
-            return ucfirst($m[1]); // "nome" -> "Nome"
-        }
-        if (preg_match('/^([^\:\.]+)\s*:/u', $msg, $m)) {
-            return trim($m[1]);
-        }
-        foreach (['Nome', 'Logradouro', 'Bairro', 'Cidade', 'Estado', 'CEP', 'Numero', 'Número', 'Complemento'] as $col) {
-            if (stripos($msg, $col) !== false) return $col;
-        }
-        return null;
-    }
-
-    private static function categorizeMessage(string $msg): string
-    {
-        $m = mb_strtolower($msg, 'UTF-8');
-        if (preg_match('/já está em uso|já existe|duplicad|unique|distinct/u', $m)) return 'duplicate';
-        if (preg_match('/em branco|obrigatóri|required/u', $m)) return 'blank';
-        if (preg_match('/formato|inv[aá]lido|regex|tamanho|size/u', $m)) return 'invalid';
-        return 'invalid';
-    }
-
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -81,6 +58,45 @@ class Escola extends Model
     {
         return $this->hasMany(User::class, 'id_escola');
     }
+
+    public function rotas()
+    {
+        return $this->belongsToMany(Rota::class, 'escola_rota', 'escola_id', 'rota_id');
+    }
+
+
+
+
+
+
+
+
+
+    private static function inferFieldFromMessage(string $msg): ?string
+    {
+        if (preg_match('/campo\s+([^\s\.\:]+)/iu', $msg, $m)) {
+            return ucfirst($m[1]); // "nome" -> "Nome"
+        }
+        if (preg_match('/^([^\:\.]+)\s*:/u', $msg, $m)) {
+            return trim($m[1]);
+        }
+        foreach (['Nome', 'Logradouro', 'Bairro', 'Cidade', 'Estado', 'CEP', 'Numero', 'Número', 'Complemento'] as $col) {
+            if (stripos($msg, $col) !== false) return $col;
+        }
+        return null;
+    }
+
+
+    private static function categorizeMessage(string $msg): string
+    {
+        $m = mb_strtolower($msg, 'UTF-8');
+        if (preg_match('/já está em uso|já existe|duplicad|unique|distinct/u', $m)) return 'duplicate';
+        if (preg_match('/em branco|obrigatóri|required/u', $m)) return 'blank';
+        if (preg_match('/formato|inv[aá]lido|regex|tamanho|size/u', $m)) return 'invalid';
+        return 'invalid';
+    }
+
+
 
     public function validateGoogleSheet(string $fileId): void
     {

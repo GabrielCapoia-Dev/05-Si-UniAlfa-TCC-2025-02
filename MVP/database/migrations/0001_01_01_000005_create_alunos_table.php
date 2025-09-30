@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('alunos', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
+            $table->foreignId('id_rota')->nullable()->constrained('rotas')->nullOnDelete();
             $table->foreignId('id_turma')->constrained('turmas')->restrictOnDelete();
             $table->date('data_nascimento');
             $table->string('cgm')->unique();
