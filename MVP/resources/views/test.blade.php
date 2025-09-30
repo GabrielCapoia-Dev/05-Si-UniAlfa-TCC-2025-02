@@ -7,166 +7,546 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
     <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            padding: 15px;
+            margin: 0 0 20px 0;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        .info-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
         #map {
             height: 600px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .info-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        .info-item label {
+            font-weight: bold;
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .info-item .value {
+            font-size: 1.1em;
+            color: #666;
+        }
+        input[type="time"], input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        .add-point {
+            background: #4CAF50;
+        }
+        .add-point:hover {
+            background: #45a049;
+        }
+        h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #2196F3;
+            padding-bottom: 10px;
+        }
+        .point-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .point-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .remove-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            width: auto;
+            margin: 0;
+        }
+        .remove-btn:hover {
+            background: #d32f2f;
+        }
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .mode-btn:hover {
+            border-color: #2196F3;
+            background: #f0f8ff;
+        }
+        .mode-btn.active {
+            border-color: #2196F3;
+            background: #2196F3;
+            color: white;
+            font-weight: bold;
+        }
+        .mode-btn.active-parada {
+            border-color: #2196F3;
+            background: #2196F3;
+        }
+        .mode-btn.active-escola {
+            border-color: #F44336;
+            background: #F44336;
+        }
+        .mode-btn.active-aluno {
+            border-color: #4CAF50;
+            background: #4CAF50;
+        }
+        .status-msg {
+            padding: 10px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .status-msg.show {
+            display: block;
         }
     </style>
 </head>
 
 <body>
-    <h1>Rota Escolar em Umuarama (via OSRM)</h1>
-    <div id="map"></div>
+    <h1>Teste Rota 1 - Sistema de Rotas Escolares</h1>
+    
+    <div class="container">
+        <div class="sidebar">
+            <h3>Modo de Adição</h3>
+            <div class="status-msg" id="statusMsg">Clique no mapa para adicionar o ponto</div>
+            
+            <div class="mode-selector">
+                <div class="mode-btn" onclick="setMode('parada')" id="btn-parada">
+                    🚏 Parada
+                </div>
+                <div class="mode-btn" onclick="setMode('escola')" id="btn-escola">
+                    🏫 Escola
+                </div>
+                <div class="mode-btn" onclick="setMode('aluno')" id="btn-aluno">
+                    👨‍🎓 Aluno
+                </div>
+            </div>
+            
+            <button onclick="desativarModo()">Desativar Modo de Adição</button>
+            
+            <h3>Adicionar Manualmente</h3>
+            <label>Tipo:</label>
+            <select id="newPointType">
+                <option value="parada">Ponto de Parada</option>
+                <option value="escola">Escola</option>
+                <option value="aluno">Aluno</option>
+            </select>
+            
+            <label>Nome:</label>
+            <input type="text" id="newPointName" placeholder="Ex: Ponto G">
+            
+            <label>Latitude:</label>
+            <input type="number" id="newPointLat" step="0.000001" placeholder="-23.766900">
+            
+            <label>Longitude:</label>
+            <input type="number" id="newPointLng" step="0.000001" placeholder="-53.312000">
+            
+            <button class="add-point" onclick="adicionarPonto()">Adicionar Ponto</button>
+            
+            <h3>Pontos na Rota</h3>
+            <div class="point-list" id="pointList"></div>
+            
+            <button onclick="recalcularRota()">Recalcular Rota</button>
+            
+            <div class="info-section">
+                <h3>Horário de Saída</h3>
+                <label>Hora de partida:</label>
+                <input type="time" id="departureTime" value="07:00" onchange="calcularHorarios()">
+            </div>
+        </div>
+        
+        <div>
+            <div id="map"></div>
+            
+            <div class="info-section">
+                <h3>Informações da Rota</h3>
+                <div class="info-item">
+                    <label>Distância Total:</label>
+                    <div class="value" id="distanciaTotal">Calculando...</div>
+                </div>
+                <div class="info-item">
+                    <label>Tempo Estimado:</label>
+                    <div class="value" id="tempoEstimado">Calculando...</div>
+                </div>
+                <div class="info-item">
+                    <label>Horário de Saída:</label>
+                    <div class="value" id="horarioSaida">07:00</div>
+                </div>
+                <div class="info-item">
+                    <label>Horário de Chegada Estimado:</label>
+                    <div class="value" id="horarioChegada">Calculando...</div>
+                </div>
+                <div class="info-item">
+                    <label>Número de Paradas:</label>
+                    <div class="value" id="numParadas">6</div>
+                </div>
+                <div class="info-item">
+                    <label>Número de Alunos:</label>
+                    <div class="value" id="numAlunos">18</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script>
-        const map = L.map('map').setView([-23.7666, -53.3121], 14);
+        const map = L.map('map').setView([-23.7666, -53.3121], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Ícones customizados
         const icons = {
             parada: L.icon({
-                iconUrl: '/images/parada.png',
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNCIgZmlsbD0iIzIxOTZGMyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTYiIHk9IjIxIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPlA8L3RleHQ+PC9zdmc+',
                 iconSize: [32, 32],
                 iconAnchor: [16, 32],
                 popupAnchor: [0, -32]
             }),
             escola: L.icon({
-                iconUrl: '/images/escola.png',
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNCIgZmlsbD0iI0Y0NDMzNiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTYiIHk9IjIxIiBmb250LXNpemU9IjE2IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkU8L3RleHQ+PC9zdmc+',
                 iconSize: [32, 32],
                 iconAnchor: [16, 32],
                 popupAnchor: [0, -32]
             }),
             aluno: L.icon({
-                iconUrl: '/images/aluno.png',
+                iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzRDQUY1MCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTIiIHk9IjE2IiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC13ZWlnaHQ9ImJvbGQiPkE8L3RleHQ+PC9zdmc+',
                 iconSize: [24, 24],
                 iconAnchor: [12, 24],
                 popupAnchor: [0, -24]
             })
         };
 
-        // Pontos principais: 6 paradas + 2 escolas
-        const pontosPrincipais = [{
-                lat: -23.764870,
-                lng: -53.313674,
-                type: 'parada',
-                label: 'Ponto A'
-            },
-            {
-                lat: -23.765900,
-                lng: -53.309500,
-                type: 'parada',
-                label: 'Ponto B'
-            },
-            {
-                lat: -23.769200,
-                lng: -53.310800,
-                type: 'parada',
-                label: 'Ponto C'
-            },
-            {
-                lat: -23.770500,
-                lng: -53.314000,
-                type: 'parada',
-                label: 'Ponto D'
-            },
-            {
-                lat: -23.767800,
-                lng: -53.318000,
-                type: 'parada',
-                label: 'Ponto E'
-            },
-            {
-                lat: -23.764200,
-                lng: -53.317000,
-                type: 'parada',
-                label: 'Ponto F'
-            },
-
-            {
-                lat: -23.766900,
-                lng: -53.307500,
-                type: 'escola',
-                label: 'Escola Central'
-            },
-            {
-                lat: -23.764000,
-                lng: -53.318200,
-                type: 'escola',
-                label: 'Escola Municipal'
-            }
+        let pontosPrincipais = [
+            { lat: -23.756000, lng: -53.325000, type: 'parada', label: 'Ponto A - Norte Oeste' },
+            { lat: -23.758500, lng: -53.305000, type: 'parada', label: 'Ponto B - Norte Leste' },
+            { lat: -23.768000, lng: -53.300000, type: 'parada', label: 'Ponto C - Leste' },
+            { lat: -23.778000, lng: -53.310000, type: 'parada', label: 'Ponto D - Sul Leste' },
+            { lat: -23.775000, lng: -53.325000, type: 'parada', label: 'Ponto E - Sul' },
+            { lat: -23.762000, lng: -53.328000, type: 'parada', label: 'Ponto F - Oeste' },
+            { lat: -23.766900, lng: -53.312000, type: 'escola', label: 'Escola Central' },
+            { lat: -23.770000, lng: -53.320000, type: 'escola', label: 'Escola Municipal' }
         ];
 
-        // Gera alunos próximos de cada ponto de parada (~100m)
-        const alunos = [];
-        pontosPrincipais.forEach(p => {
-            if (p.type === 'parada') {
-                alunos.push({
-                    lat: p.lat + 0.001,
-                    lng: p.lng + 0.0005,
-                    type: 'aluno',
-                    label: `Aluno próximo de ${p.label}`
-                }, {
-                    lat: p.lat - 0.001,
-                    lng: p.lng - 0.0004,
-                    type: 'aluno',
-                    label: `Aluno próximo de ${p.label}`
-                }, {
-                    lat: p.lat + 0.0006,
-                    lng: p.lng - 0.0007,
-                    type: 'aluno',
-                    label: `Aluno próximo de ${p.label}`
-                });
+        let alunos = [];
+        let markers = [];
+        let circles = [];
+        let routingControl = null;
+        let routeInfo = { distance: 0, time: 0 };
+        let addMode = null; // 'parada', 'escola', 'aluno' ou null
+        let pontoCounter = { parada: 7, escola: 3, aluno: 1 };
+
+        // Configura o clique no mapa
+        map.on('click', function(e) {
+            if (addMode) {
+                adicionarPontoNoMapa(e.latlng.lat, e.latlng.lng);
             }
         });
 
-        const stops = [...pontosPrincipais, ...alunos];
+        function setMode(mode) {
+            addMode = mode;
+            
+            // Remove classe active de todos
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active', 'active-parada', 'active-escola', 'active-aluno');
+            });
+            
+            // Adiciona classe active no selecionado
+            const btn = document.getElementById(`btn-${mode}`);
+            btn.classList.add('active', `active-${mode}`);
+            
+            // Mostra mensagem
+            const statusMsg = document.getElementById('statusMsg');
+            statusMsg.textContent = `Clique no mapa para adicionar ${mode === 'parada' ? 'uma parada' : mode === 'escola' ? 'uma escola' : 'um aluno'}`;
+            statusMsg.classList.add('show');
+            
+            // Muda cursor do mapa
+            document.getElementById('map').style.cursor = 'crosshair';
+        }
 
-        // Adiciona marcadores
-        stops.forEach(stop => {
-            L.marker([stop.lat, stop.lng], {
-                    icon: icons[stop.type]
-                })
-                .addTo(map)
-                .bindPopup(stop.label);
-        });
+        function desativarModo() {
+            addMode = null;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active', 'active-parada', 'active-escola', 'active-aluno');
+            });
+            document.getElementById('statusMsg').classList.remove('show');
+            document.getElementById('map').style.cursor = '';
+        }
 
-        // Define a ordem da rota: pontos + escolas no meio
-        const waypoints = [
-            L.latLng(pontosPrincipais[0].lat, pontosPrincipais[0].lng), // Ponto A
-            L.latLng(pontosPrincipais[1].lat, pontosPrincipais[1].lng), // Ponto B
-            L.latLng(pontosPrincipais[6].lat, pontosPrincipais[6].lng), // Escola Central
-            L.latLng(pontosPrincipais[2].lat, pontosPrincipais[2].lng), // Ponto C
-            L.latLng(pontosPrincipais[3].lat, pontosPrincipais[3].lng), // Ponto D
-            L.latLng(pontosPrincipais[4].lat, pontosPrincipais[4].lng), // Ponto E
-            L.latLng(pontosPrincipais[5].lat, pontosPrincipais[5].lng), // Ponto F
-            L.latLng(pontosPrincipais[7].lat, pontosPrincipais[7].lng) // Escola Municipal
-        ];
-
-        // Rota OSRM
-        L.Routing.control({
-            waypoints: waypoints,
-            router: L.Routing.osrmv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1'
-            }),
-            lineOptions: {
-                styles: [{
-                    color: 'blue',
-                    opacity: 0.7,
-                    weight: 5
-                }]
-            },
-            show: false,
-            addWaypoints: false,
-            draggableWaypoints: false,
-            fitSelectedRoutes: true,
-            createMarker: function() {
-                return null;
+        function adicionarPontoNoMapa(lat, lng) {
+            if (!addMode) return;
+            
+            let label = '';
+            if (addMode === 'parada') {
+                label = `Ponto ${String.fromCharCode(64 + pontoCounter.parada)}`;
+                pontoCounter.parada++;
+            } else if (addMode === 'escola') {
+                label = `Escola ${pontoCounter.escola}`;
+                pontoCounter.escola++;
+            } else if (addMode === 'aluno') {
+                label = `Aluno ${pontoCounter.aluno}`;
+                pontoCounter.aluno++;
             }
-        }).addTo(map);
+            
+            pontosPrincipais.push({
+                lat: lat,
+                lng: lng,
+                type: addMode,
+                label: label
+            });
+            
+            desenharMapa();
+            
+            // Mantém o modo ativo para adicionar mais pontos
+            const statusMsg = document.getElementById('statusMsg');
+            statusMsg.textContent = `${label} adicionado! Clique novamente para adicionar mais.`;
+        }
+
+        function gerarAlunos() {
+            alunos = [];
+            pontosPrincipais.forEach(p => {
+                if (p.type === 'parada') {
+                    alunos.push(
+                        { lat: p.lat + 0.0012, lng: p.lng + 0.0008, type: 'aluno', label: `Aluno 1 - ${p.label}` },
+                        { lat: p.lat - 0.0010, lng: p.lng - 0.0006, type: 'aluno', label: `Aluno 2 - ${p.label}` },
+                        { lat: p.lat + 0.0008, lng: p.lng - 0.0010, type: 'aluno', label: `Aluno 3 - ${p.label}` }
+                    );
+                }
+            });
+        }
+
+        function limparMapa() {
+            markers.forEach(m => map.removeLayer(m));
+            circles.forEach(c => map.removeLayer(c));
+            markers = [];
+            circles = [];
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+        }
+
+        function desenharMapa() {
+            limparMapa();
+            gerarAlunos();
+            
+            const stops = [...pontosPrincipais, ...alunos];
+            
+            // Adiciona círculos
+            pontosPrincipais.forEach(p => {
+                let circle;
+                if (p.type === 'parada') {
+                    circle = L.circle([p.lat, p.lng], {
+                        color: '#2196F3',
+                        fillColor: '#2196F3',
+                        fillOpacity: 0.15,
+                        radius: 500,
+                        weight: 2
+                    }).addTo(map);
+                } else if (p.type === 'escola') {
+                    circle = L.circle([p.lat, p.lng], {
+                        color: '#F44336',
+                        fillColor: '#F44336',
+                        fillOpacity: 0.1,
+                        radius: 2000,
+                        weight: 2
+                    }).addTo(map);
+                }
+                if (circle) circles.push(circle);
+            });
+
+            // Adiciona marcadores
+            stops.forEach(stop => {
+                const marker = L.marker([stop.lat, stop.lng], { icon: icons[stop.type] })
+                    .addTo(map)
+                    .bindPopup(`<b>${stop.label}</b><br>Lat: ${stop.lat.toFixed(6)}<br>Lng: ${stop.lng.toFixed(6)}`);
+                markers.push(marker);
+            });
+
+            // Cria waypoints para rota
+            const waypoints = pontosPrincipais
+                .filter(p => p.type === 'parada' || p.type === 'escola')
+                .map(p => L.latLng(p.lat, p.lng));
+
+            // Cria rota
+            routingControl = L.Routing.control({
+                waypoints: waypoints,
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                lineOptions: {
+                    styles: [{ color: '#ff0707ff', opacity: 0.8, weight: 5 }]
+                },
+                show: false,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                createMarker: () => null
+            }).addTo(map);
+
+            routingControl.on('routesfound', function(e) {
+                console.log(e);
+                const routes = e.routes;
+                const summary = routes[0].summary;
+                routeInfo.distance = (summary.totalDistance / 1000).toFixed(2);
+                routeInfo.time = Math.round(summary.totalTime / 60);
+                atualizarInformacoes();
+            });
+
+            atualizarListaPontos();
+            atualizarContadores();
+        }
+
+        function atualizarInformacoes() {
+            document.getElementById('distanciaTotal').textContent = `${routeInfo.distance} km`;
+            document.getElementById('tempoEstimado').textContent = `${routeInfo.time} minutos`;
+            calcularHorarios();
+        }
+
+        function calcularHorarios() {
+            const horarioSaida = document.getElementById('departureTime').value;
+            document.getElementById('horarioSaida').textContent = horarioSaida;
+            
+            if (routeInfo.time > 0) {
+                const [horas, minutos] = horarioSaida.split(':').map(Number);
+                const totalMinutos = horas * 60 + minutos + routeInfo.time;
+                const horasChegada = Math.floor(totalMinutos / 60) % 24;
+                const minutosChegada = totalMinutos % 60;
+                const horarioChegada = `${String(horasChegada).padStart(2, '0')}:${String(minutosChegada).padStart(2, '0')}`;
+                document.getElementById('horarioChegada').textContent = horarioChegada;
+            }
+        }
+
+        function atualizarContadores() {
+            const numParadas = pontosPrincipais.filter(p => p.type === 'parada').length;
+            const numAlunos = alunos.length;
+            document.getElementById('numParadas').textContent = numParadas;
+            document.getElementById('numAlunos').textContent = numAlunos;
+        }
+
+        function atualizarListaPontos() {
+            const lista = document.getElementById('pointList');
+            lista.innerHTML = '';
+            pontosPrincipais.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.className = 'point-item';
+                div.innerHTML = `
+                    <span>${p.label} (${p.type})</span>
+                    <button class="remove-btn" onclick="removerPonto(${index})">Remover</button>
+                `;
+                lista.appendChild(div);
+            });
+        }
+
+        function adicionarPonto() {
+            const type = document.getElementById('newPointType').value;
+            const label = document.getElementById('newPointName').value;
+            const lat = parseFloat(document.getElementById('newPointLat').value);
+            const lng = parseFloat(document.getElementById('newPointLng').value);
+
+            if (!label || isNaN(lat) || isNaN(lng)) {
+                alert('Por favor, preencha todos os campos corretamente!');
+                return;
+            }
+
+            pontosPrincipais.push({ lat, lng, type, label });
+            desenharMapa();
+
+            // Limpa campos
+            document.getElementById('newPointName').value = '';
+            document.getElementById('newPointLat').value = '';
+            document.getElementById('newPointLng').value = '';
+        }
+
+        function removerPonto(index) {
+            pontosPrincipais.splice(index, 1);
+            desenharMapa();
+        }
+
+        function recalcularRota() {
+            desenharMapa();
+        }
+
+        // Inicializa o mapa
+        desenharMapa();
     </script>
 </body>
 
