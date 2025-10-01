@@ -3,15 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\RotaResource\Pages;
-use App\Filament\Resources\RotaResource\RelationManagers;
+use App\Forms\Components\Mapa;
 use App\Models\Rota;
 use Filament\Forms;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class RotaResource extends Resource
 {
@@ -23,17 +22,41 @@ class RotaResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nome')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Select::make('turno')
-                    ->options([
-                        'Manhã' => 'Manhã',
-                        'Tarde' => 'Tarde',
-                        'Noite' => 'Noite',
-                        'Integral' => 'Integral',
+                Grid::make(12)
+                    ->schema([
+                        Mapa::make('pontos')
+                            ->label('Mapa da Rota')
+                            ->columnSpan(5),
+
+                        Grid::make(12)
+                            ->schema([
+                                Forms\Components\TextInput::make('nome')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpan(7),
+
+                                Forms\Components\Select::make('escola_id')
+                                    ->label('Escola')
+                                    ->required()
+                                    ->relationship('escolas', 'nome')
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->columnSpan(7),
+
+                                Forms\Components\Select::make('turno')
+                                    ->options([
+                                        'Manhã' => 'Manhã',
+                                        'Tarde' => 'Tarde',
+                                        'Noite' => 'Noite',
+                                        'Integral' => 'Integral',
+                                    ])
+                                    ->required()
+                                    ->columnSpan(7),
+                            ])
+                            ->columnSpan(7),
                     ])
-                    ->required(),
+
             ]);
     }
 

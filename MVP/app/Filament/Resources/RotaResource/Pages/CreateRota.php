@@ -3,11 +3,20 @@
 namespace App\Filament\Resources\RotaResource\Pages;
 
 use App\Filament\Resources\RotaResource;
-use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
 
 class CreateRota extends CreateRecord
 {
     protected static string $resource = RotaResource::class;
-    protected static string $view = 'components.layouts.test';
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+
+        dd($data);
+        if (empty($data['pontos']) || count($data['pontos']) < 2) {
+        }
+
+        return $data;
+    }
 }

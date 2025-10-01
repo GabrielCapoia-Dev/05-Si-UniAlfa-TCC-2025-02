@@ -58,7 +58,7 @@ class AdminPanelProvider extends PanelProvider
                     400 => '#a0a0a0ff',
                     500 => '#929292ff',
                     600 => '#5c5c66ff',
-                    700 => '#374151',
+                    700 => '#513737ff',
                     800 => '#1f2937',
                     900 => '#0e1930ff',
                     950 => '#081124ff',
