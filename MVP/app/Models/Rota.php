@@ -7,23 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Permission\Traits\HasRoles;
 
-
-class Veiculo extends Model
+class Rota extends Model
 {
     use HasFactory;
     use Notifiable;
-    use HasRoles;
     use LogsActivity;
 
-    protected $table = 'veiculos';
-
+    protected $table = 'rotas';
     protected $fillable = [
         'nome',
-        'placa',
-        'assentos',
-        'ano'
+        'turno',
     ];
 
 
@@ -33,9 +27,22 @@ class Veiculo extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'nome',
-                'placa',
-                'assentos',
-                'ano'
+                'turno',
             ]);
+    }
+
+    public function alunos()
+    {
+        return $this->hasMany(Aluno::class);
+    }
+
+    public function pontosDeParada()
+    {
+        return $this->hasMany(PontosDeParada::class);
+    }
+
+    public function escolas()
+    {
+        return $this->belongsToMany(Escola::class, 'escola_rota', 'rota_id', 'escola_id');
     }
 }

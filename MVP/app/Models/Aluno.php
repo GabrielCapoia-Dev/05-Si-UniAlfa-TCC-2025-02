@@ -18,6 +18,7 @@ class Aluno extends Model
     protected $table = 'alunos';
 
     protected $fillable = [
+        'id_rota',
         'id_turma',
         'nome',
         'data_nascimento',
@@ -45,6 +46,7 @@ class Aluno extends Model
     {
         return LogOptions::defaults()
             ->logOnly([
+                'id_rota',
                 'id_turma',
                 'nome',
                 'data_nascimento',
@@ -70,5 +72,10 @@ class Aluno extends Model
     public function turma()
     {
         return $this->belongsTo(Turma::class, 'id_turma');
+    }
+
+    public function rota()
+    {
+        return $this->belongsTo(Rota::class, 'id_rota');
     }
 }

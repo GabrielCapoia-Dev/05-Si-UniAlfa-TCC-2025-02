@@ -5,26 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
 
 class PontosDeParada extends Model
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable;
 
     protected $table = 'pontos_de_parada';
 
     protected $fillable = [
-        'nome',
-        'descricao',
+        'id_rota',
         'latitude',
         'longitude',
-        'raio',
-        'logradouro',
-        'bairro',
-        'cidade',
-        'uf',
-        'cep',
-        'tipo',
-        'ativo',
     ];
+
+
+    public function rota()
+    {
+        return $this->belongsTo(Rota::class, 'id_rota');
+    }
 }
