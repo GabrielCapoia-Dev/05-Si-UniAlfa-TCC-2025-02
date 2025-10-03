@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('escolas', function (Blueprint $table) {
             $table->id();
             $table->string('nome')->unique();
-            $table->decimal('latitude')->nullable();
-            $table->decimal('longitude')->nullable();
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
             $table->integer('raio')->nullable();
             $table->string('logradouro');
             $table->string('bairro');

@@ -26,6 +26,7 @@ class RotaResource extends Resource
                     ->schema([
                         Mapa::make('pontos')
                             ->label('Mapa da Rota')
+                            ->rotaAtiva(true)
                             ->columnSpan(5),
 
                         Grid::make(12)
