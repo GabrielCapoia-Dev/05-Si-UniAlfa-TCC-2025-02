@@ -1,22 +1,52 @@
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
   <div
     x-data="window.MapaRota({
-      pontos: @entangle($getStatePath()).live,     // sincroniza em tempo real
+      pontos: @entangle($getStatePath()).live,
       statePath: @js($getStatePath()),
       center: [-23.7666, -53.3121],
       zoom: 13,
       addMode: true,
       rotaAtiva: {{ ($getExtraAttributes()['rota-ativa'] ?? '1') === '1' ? 'true' : 'false' }},
+      raioEscola: {{ (int)($getExtraAttributes()['raio-escola'] ?? 2000) }},
+      raioPonto:  {{ (int)($getExtraAttributes()['raio-ponto']  ??  500) }},
     })"
     x-init="init()"
     class="relative"
-    wire:ignore>
+    wire:ignore
+    data-mapa-ctrl>
     <div x-ref="mapContainer" class="map-container"></div>
   </div>
 
   @assets
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    window.addEventListener('pontos-updated', () => {
+      document.querySelectorAll('[data-mapa-ctrl]').forEach(el => {
+        const ctrl = el._mapa_ctrl;
+        if (!ctrl) return;
+        ctrl.renderizarMarcadores();
+        if (ctrl.rotaAtiva) ctrl.calcularRota();
+        ctrl.map?.invalidateSize(false);
+      });
+    });
+
+    document.addEventListener('livewire:load', () => {
+      if (window.Livewire?.hook) {
+        Livewire.hook('message.processed', () => {
+          document.querySelectorAll('[data-mapa-ctrl]').forEach(el => {
+            const ctrl = el._mapa_ctrl;
+            if (!ctrl) return;
+            ctrl.renderizarMarcadores();
+            if (ctrl.rotaAtiva) ctrl.calcularRota();
+            ctrl.map?.invalidateSize(false);
+          });
+        });
+      }
+    });
+  </script>
+
 
   <script>
     window.MapaRota = window.MapaRota || function(opts = {}) {
@@ -27,10 +57,13 @@
         center: opts.center ?? [-23.7666, -53.3121],
         addMode: opts.addMode ?? true,
         rotaAtiva: opts.rotaAtiva ?? true,
+        raioEscola: opts.raioEscola ?? 2000,
+        raioPonto: opts.raioPonto ?? 500,
 
         map: null,
         markers: [],
         rotaLayer: null,
+        circlesGroup: null,
 
         sync() {
           if (this.$wire && this.statePath) {
@@ -41,6 +74,8 @@
         init() {
           if (this.map) return;
 
+          this.$el._mapa_ctrl = this;
+
           this.map = L.map(this.$refs.mapContainer, {
               zoomControl: true
             })
@@ -50,17 +85,21 @@
             attribution: '&copy; OpenStreetMap contributors'
           }).addTo(this.map);
 
-          // guarde a instância no DOM para reinvalidação pós-Livewire
           this.$refs.mapContainer._leaflet_map = this.map;
-
-          // container pode estar invisível → corrige depois do primeiro paint
           this.$nextTick(() => setTimeout(() => this.map.invalidateSize(), 300));
+
+          // 🔹 grupo dedicado à rota
+          this.routeGroup = L.layerGroup().addTo(this.map);
+          this.rotaLayer = null;
+
+          this.circlesGroup = L.layerGroup().addTo(this.map);
+          // 🔹 controle de concorrência de requisições
+          this._routeReqId = 0;
+          this._routeAbort = null;
 
           this.map.on('click', (e) => {
             if (!this.addMode) return;
-
             if (!this.rotaAtiva) {
-              // modo escola: 1 único ponto
               this.pontos = [{
                 latitude: e.latlng.lat,
                 longitude: e.latlng.lng,
@@ -69,7 +108,7 @@
             } else {
               this.adicionarPonto(e.latlng.lat, e.latlng.lng);
             }
-            this.sync(); // dispara afterStateUpdated no backend
+            this.sync?.();
           });
 
           this.$watch('pontos', () => {
@@ -82,6 +121,7 @@
           this.renderizarMarcadores();
           if (this.rotaAtiva) this.calcularRota();
         },
+
 
         adicionarPonto(lat, lng) {
           const novo = {
@@ -104,78 +144,129 @@
           this.markers.forEach(m => this.map.removeLayer(m));
           this.markers = [];
 
+          this.circlesGroup?.clearLayers();
+
           if (!this.pontos || this.pontos.length === 0) return;
 
           this.pontos.forEach((ponto, i) => {
-            // cor diferente para escola (opcional)
-            const color = (ponto.tipo === 'escola') ? '#FF6F00' : '#1E88E5';
+            const isEscola = (ponto.tipo === 'escola');
+            const color = isEscola ? '#FF6F00' : '#1E88E5';
             const icon = makeNumberedIcon(ponto.ordem ?? (i + 1), {
               fill: color
             });
 
             const marker = L.marker([ponto.latitude, ponto.longitude], {
-              draggable: true,
-              icon, // <- ícone numerado
+              draggable: !isEscola, // 🔒 escola = fixo
+              icon,
             }).addTo(this.map);
 
-            marker.on('click', () => this.removerPonto(i));
-
-            marker.on('dragend', (e) => {
-              const pos = e.target.getLatLng();
-              const arr = [...this.pontos];
-              arr[i] = {
-                ...arr[i],
-                latitude: pos.lat,
-                longitude: pos.lng
-              };
-              this.pontos = arr;
-              this.sync?.(); // se você estiver usando sync() para empurrar pro Livewire
-            });
+            // Só pontos manuais podem ser removidos/arrastados
+            if (!isEscola) {
+              marker.on('click', () => this.removerPonto(i));
+              marker.on('dragend', (e) => {
+                const pos = e.target.getLatLng();
+                const arr = [...this.pontos];
+                arr[i] = {
+                  ...arr[i],
+                  latitude: pos.lat,
+                  longitude: pos.lng
+                };
+                this.pontos = arr;
+                this.sync?.();
+              });
+            }
 
             marker.bindPopup(`
-      <div style="min-width:150px;">
-        <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
-        <small>Lat: ${Number(ponto.latitude).toFixed(6)}<br>Lng: ${Number(ponto.longitude).toFixed(6)}</small>
-      </div>
-    `);
+              <div style="min-width:150px;">
+                <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
+                <small>Lat: ${Number(ponto.latitude).toFixed(6)}<br>Lng: ${Number(ponto.longitude).toFixed(6)}</small>
+              </div>
+            `);
 
             this.markers.push(marker);
+
+            const raio = Number(ponto.raio ?? (isEscola ? this.raioEscola : this.raioPonto));
+            if (!Number.isNaN(raio) && raio > 0) {
+              const circle = L.circle([ponto.latitude, ponto.longitude], {
+                radius: raio,
+                color: color,
+                fillColor: color,
+                fillOpacity: isEscola ? 0.12 : 0.15,
+                weight: 2,
+              });
+              circle.addTo(this.circlesGroup);
+            }
           });
+
 
           if (this.pontos.length === 1) {
             this.map.setView([this.pontos[0].latitude, this.pontos[0].longitude], this.zoom);
           }
         },
 
+
         async calcularRota() {
+          // Sem paradas suficientes → limpa rota
           if (!this.pontos || this.pontos.length < 2) {
-            if (this.rotaLayer) {
-              this.map.removeLayer(this.rotaLayer);
-              this.rotaLayer = null;
+            if (this._routeAbort) {
+              try {
+                this._routeAbort.abort();
+              } catch {}
             }
+            this.routeGroup?.clearLayers();
+            this.rotaLayer = null;
             return;
           }
 
           const coords = this.pontos.map(p => `${p.longitude},${p.latitude}`).join(';');
 
-          try {
-            const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
-            const data = await res.json();
-            if (data.routes && data.routes.length > 0) {
-              const route = data.routes[0];
-              if (this.rotaLayer) this.map.removeLayer(this.rotaLayer);
-              this.rotaLayer = L.geoJSON(route.geometry, {
-                style: {
-                  color: '#ff3c00',
-                  weight: 5,
-                  opacity: 0.7
-                }
-              }).addTo(this.map);
-            }
-          } catch (err) {
-            console.error('Erro ao calcular rota:', err);
+          // Cancela requisição anterior e gera um ID desta requisição
+          if (this._routeAbort && typeof this._routeAbort.abort === 'function') {
+            try {
+              this._routeAbort.abort();
+            } catch {}
           }
-        },
+          this._routeAbort = ('AbortController' in window) ? new AbortController() : null;
+          const reqId = ++this._routeReqId;
+
+          try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+            const res = await fetch(url, this._routeAbort ? {
+              signal: this._routeAbort.signal
+            } : undefined);
+
+            // Se outra requisição já começou depois desta, ignora a resposta
+            if (reqId !== this._routeReqId) return;
+
+            const data = await res.json();
+            if (!data.routes || data.routes.length === 0) {
+              this.routeGroup?.clearLayers();
+              this.rotaLayer = null;
+              return;
+            }
+
+            const route = data.routes[0];
+
+            // 🔄 limpa completamente a rota anterior para evitar sobreposição
+            this.routeGroup?.clearLayers();
+
+            // desenha nova rota
+            this.rotaLayer = L.geoJSON(route.geometry, {
+              style: {
+                color: '#ff3c00',
+                weight: 5,
+                opacity: 0.7
+              },
+            }).addTo(this.routeGroup);
+
+          } catch (err) {
+            // Se deu abort, só sai; outros erros loga
+            if (!(err && err.name === 'AbortError')) {
+              console.error('Erro ao calcular rota:', err);
+            }
+          }
+        }
+
       }
     };
 
