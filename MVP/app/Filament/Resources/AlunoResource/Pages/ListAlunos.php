@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 class ListAlunos extends ListRecords
 {
     protected static string $resource = AlunoResource::class;
-    protected static string $view = 'components.layouts.list-with-sidebar';
+    protected static string $view = 'components.layouts.list-alunos';
 
     public ?Aluno $alunoSelecionado = null;
 

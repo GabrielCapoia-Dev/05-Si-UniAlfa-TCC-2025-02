@@ -427,10 +427,8 @@ class AlunoResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
                     ->before(function ($record, Tables\Actions\DeleteAction $action) {
-                        // Pega a instância Livewire da página
                         $livewire = $action->getLivewire();
 
-                        // Se for a ListAlunos e o card aberto for o mesmo aluno → fecha
                         if ($livewire instanceof ListAlunos) {
                             if ($livewire->alunoSelecionado && $livewire->alunoSelecionado->id === $record->id) {
                                 $livewire->fecharDetalhesAluno();

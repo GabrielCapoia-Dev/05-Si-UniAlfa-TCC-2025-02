@@ -1,3 +1,4 @@
+<!-- $view = 'components.layouts.list-alunos' -->
 <x-filament::page>
     <div class="flex flex-col lg:flex-row gap-4 h-full">
         {{-- Tabela --}}

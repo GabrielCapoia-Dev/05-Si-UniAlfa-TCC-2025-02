@@ -173,23 +173,80 @@ class RotaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->paginated([10, 25, 50, 100])
+            ->modifyQueryUsing(function ($query) {
+                $query
+                    ->withCount([
+                        'pontosDeParada',
+                        'escolas',
+                        'pontosDeParada as pontos_count' => fn($q) => $q->where('tipo', 'ponto'),
+                        'pontosDeParada as pontos_escola_count' => fn($q) => $q->where('tipo', 'escola'),
+                    ]);
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('nome')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('turno'),
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\BadgeColumn::make('turno')
+                    ->colors([
+                        'success' => 'Manhã',
+                        'warning' => 'Tarde',
+                        'info'    => 'Noite',
+                        'primary' => 'Integral',
+                    ])
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('pontos_de_parada_count')
+                    ->label('Paradas')
+                    ->numeric()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('escolas_count')
+                    ->label('Escolas')
+                    ->numeric()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('pontos_count')
+                    ->label('Pontos')
+                    ->numeric()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('escolas.nome')
+                    ->label('Escolas')
+                    ->badge()
+                    ->limitList(3)
+                    ->separator(', ')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                // ex.: filtrar por turno
+                Tables\Filters\SelectFilter::make('turno')
+                    ->options([
+                        'Manhã' => 'Manhã',
+                        'Tarde' => 'Tarde',
+                        'Noite' => 'Noite',
+                        'Integral' => 'Integral',
+                    ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('visualizar')
+                    ->label('Ver Detalhes')
+                    ->icon('heroicon-m-eye')
+                    ->color('info')
+                    ->action(function (\App\Models\Rota $record, $livewire) {
+                        $livewire->dispatch('abrirDetalhesRota', $record->id);
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -199,6 +256,7 @@ class RotaResource extends Resource
                 ]),
             ]);
     }
+
 
     public static function getRelations(): array
     {
