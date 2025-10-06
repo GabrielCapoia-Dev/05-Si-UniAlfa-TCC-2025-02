@@ -15,6 +15,8 @@ class Mapa extends Field
         parent::setUp();
 
         $this->default([]);
+        
+        $this->dehydrated(true);
 
         $this->afterStateHydrated(function (Mapa $component, $state) {
             if (is_null($state)) {
