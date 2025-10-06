@@ -18,6 +18,10 @@ use Filament\Tables\Filters\Filter;
 use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Rota;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Illuminate\Support\Facades\DB;
 
 class AlunoResource extends Resource
 {
@@ -80,32 +84,47 @@ class AlunoResource extends Resource
                                     }),
                                 Forms\Components\Fieldset::make('Rotas')
                                     ->schema([
-                                        Forms\Components\Select::make('rota')
-                                            ->label('Rotas:')
-                                            ->placeholder('Selecione')
-                                            ->columnSpan(3)
-                                            ->options([
-                                                'teste' => 'Rota 1',
-                                                'teste' => 'Rota 2',
-                                                'teste' => 'Rota 3',
-                                                'teste' => 'Rota 4',
-                                                'teste' => 'Rota 5',
-                                                'teste' => 'Rota 6',
-                                            ]),
-                                        Forms\Components\Select::make('ponto')
-                                            ->label('Ponto de Parada:')
-                                            ->placeholder('Selecione')
-                                            ->columnSpan(3)
+                                        Forms\Components\Select::make('id_rota')
+                                            ->label('Rota de transporte')
+                                            ->options(function (Get $get) {
+                                                $turmaId = $get('id_turma');
+                                                if (!$turmaId) return [];
 
-                                            ->options([
-                                                'teste' => 'Ponto 1',
-                                                'teste' => 'Ponto 2',
-                                                'teste' => 'Ponto 3',
-                                                'teste' => 'Ponto 4',
-                                                'teste' => 'Ponto 5',
-                                                'teste' => 'Ponto 6',
-                                            ]),
+                                                $escolaId = Turma::whereKey($turmaId)->value('id_escola');
+                                                if (!$escolaId) return [];
+
+                                                return Rota::query()
+                                                    ->whereHas('escolas', fn($q) => $q->where('escolas.id', $escolaId))
+                                                    ->orderBy('nome')
+                                                    ->pluck('nome', 'id');
+                                            })
+                                            ->disabled(fn(Get $get) => blank($get('id_turma')))
+                                            ->visible(function () {
+                                                /** @var \App\Models\User */
+                                                $user = Auth::user();
+
+                                                if ($user->hasRole('Admin')) {
+                                                    return true;
+                                                }
+
+                                                return false;
+                                            })
+                                            ->helperText('Lista apenas rotas vinculadas à escola da turma selecionada.')
+                                            ->searchable()
+                                            ->preload()
+                                            ->columnSpan(3)
+                                            ->required(),
                                     ])
+                                    ->visible(function () {
+                                        /** @var \App\Models\User */
+                                        $user = Auth::user();
+
+                                        if ($user->hasRole('Admin')) {
+                                            return true;
+                                        }
+
+                                        return false;
+                                    })
                             ])
                             ->columnSpan(3),
                         Forms\Components\Grid::make(9)
@@ -256,6 +275,7 @@ class AlunoResource extends Resource
                                                             ]);
                                                     })
                                                     ->default(fn($record) => $record?->id_turma)
+                                                    ->afterStateUpdated(fn(Set $set) => $set('id_rota', null))
                                                     ->searchable()
                                                     ->required()
                                                     ->dehydrated(true)
