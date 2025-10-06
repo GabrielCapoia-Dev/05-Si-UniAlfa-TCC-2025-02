@@ -14,13 +14,21 @@ class PontosDeParada extends Model
 
     protected $fillable = [
         'id_rota',
+        'id_escola',
         'latitude',
         'longitude',
+        'ordem',
+        'tipo',
     ];
 
 
     public function rota()
     {
         return $this->belongsTo(Rota::class, 'id_rota');
+    }
+
+    public function escola()
+    {
+        return $this->belongsTo(Escola::class, 'id_escola');
     }
 }

@@ -12,9 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('escola_id')->constrained('escolas')->cascadeOnDelete();
             $table->foreignId('rota_id')->constrained('rotas')->cascadeOnDelete();
-            $table->timestamps();
 
             $table->unique(['escola_id', 'rota_id']);
+            $table->timestamps();
         });
     }
 

@@ -38,7 +38,7 @@ class Rota extends Model
 
     public function pontosDeParada()
     {
-        return $this->hasMany(PontosDeParada::class);
+        return $this->hasMany(PontosDeParada::class, 'id_rota');
     }
 
     public function escolas()
