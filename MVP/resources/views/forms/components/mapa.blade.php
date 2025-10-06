@@ -150,7 +150,7 @@
 
           this.pontos.forEach((ponto, i) => {
             const isEscola = (ponto.tipo === 'escola');
-            const color = isEscola ? '#FF6F00' : '#1E88E5';
+            const color = isEscola ? '#10b981' : '#1E88E5';
             const icon = makeNumberedIcon(ponto.ordem ?? (i + 1), {
               fill: color
             });
@@ -253,7 +253,7 @@
             // desenha nova rota
             this.rotaLayer = L.geoJSON(route.geometry, {
               style: {
-                color: '#ff3c00',
+                color: '#10b981',
                 weight: 5,
                 opacity: 0.7
               },

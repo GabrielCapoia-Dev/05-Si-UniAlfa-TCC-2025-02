@@ -31,6 +31,8 @@
                             center: @js(!empty($rotaPontos) ? [$rotaPontos[0]['latitude'], $rotaPontos[0]['longitude']] : [-23.7666, -53.3121]),
                             zoom: 13,
                             rotaAtiva: true,
+                            raioEscola: 2000,
+                            raioPonto:500
                         })"
                         x-init="init()"
                         class="relative"
@@ -59,14 +61,18 @@
                 zoom: opts.zoom ?? 13,
                 rotaAtiva: opts.rotaAtiva ?? true,
 
+                // ▼ novos parâmetros
+                raioEscola: opts.raioEscola ?? 2000,
+                raioPonto: opts.raioPonto ?? 500,
+
                 map: null,
                 markers: [],
                 routeGroup: null,
+                circlesGroup: null, // ▼ novo
 
                 init() {
                     if (this.map) return;
 
-                    // Guarda ponteiro no elemento (igual ao componente original)
                     this.$el._mapa_ctrl = this;
 
                     this.map = L.map(this.$refs.mapContainer, {
@@ -79,24 +85,23 @@
                     }).addTo(this.map);
 
                     this.routeGroup = L.layerGroup().addTo(this.map);
+                    this.circlesGroup = L.layerGroup().addTo(this.map); // ▼ novo
 
-                    // Exponha o map no container para futuros invalidates (igual ao original)
                     this.$refs.mapContainer._leaflet_map = this.map;
 
-                    // Primeiro render
                     this.renderizarMarcadores();
                     if (this.rotaAtiva) this.calcularRota();
 
-                    // Corrige tamanho após o DOM estabilizar
                     this.$nextTick(() => setTimeout(() => this.map.invalidateSize(false), 200));
                 },
 
                 renderizarMarcadores() {
-                    // remove anteriores
-                    if (this.markers?.length) {
-                        this.markers.forEach(m => this.map.removeLayer(m));
-                    }
+                    // limpa marcadores
+                    if (this.markers?.length) this.markers.forEach(m => this.map.removeLayer(m));
                     this.markers = [];
+
+                    // limpa círculos
+                    this.circlesGroup?.clearLayers(); // ▼ novo
 
                     if (!this.pontos?.length) return;
 
@@ -104,12 +109,14 @@
 
                     this.pontos.forEach((p, i) => {
                         const isEscola = p.tipo === 'escola';
-                        const color = isEscola ? '#FF6F00' : '#1E88E5';
+                        const color = isEscola ? '#10b981' : '#1E88E5';
                         const icon = makeNumberedIcon(p.ordem ?? (i + 1), {
                             fill: color
                         });
 
-                        const marker = L.marker([p.latitude, p.longitude], {
+                        const latlng = [p.latitude, p.longitude];
+
+                        const marker = L.marker(latlng, {
                             icon
                         }).addTo(this.map);
                         marker.bindPopup(`
@@ -120,7 +127,19 @@
         `);
 
                         this.markers.push(marker);
-                        bounds.push([p.latitude, p.longitude]);
+                        bounds.push(latlng);
+
+                        // ▼ círculo por ponto (usa p.raio se existir, senão padrão por tipo)
+                        const raio = Number(p.raio ?? (isEscola ? this.raioEscola : this.raioPonto));
+                        if (!Number.isNaN(raio) && raio > 0) {
+                            L.circle(latlng, {
+                                radius: raio,
+                                color,
+                                fillColor: color,
+                                fillOpacity: isEscola ? 0.12 : 0.15,
+                                weight: 2,
+                            }).addTo(this.circlesGroup);
+                        }
                     });
 
                     if (bounds.length >= 2) {
@@ -137,7 +156,6 @@
                         this.routeGroup?.clearLayers();
                         return;
                     }
-
                     const coords = this.pontos.map(p => `${p.longitude},${p.latitude}`).join(';');
                     try {
                         const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
@@ -160,6 +178,7 @@
             };
         };
 
+
         // --- helper: mesmo do componente original ---
         function makeNumberedIcon(n, {
             fill = '#1E88E5',
@@ -168,11 +187,11 @@
             const label = (n ?? '').toString();
             const fontSize = label.length <= 1 ? 14 : (label.length === 2 ? 12 : 10);
             const svg = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="48" viewBox="0 0 32 48">
-    <path d="M16 0c-8.837 0-16 7.163-16 16 0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z" fill="${fill}"/>
-    <circle cx="16" cy="16" r="10" fill="#fff"/>
-    <text x="16" y="20" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="${fontSize}" fill="${textColor}">${label}</text>
-  </svg>`.trim();
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="48" viewBox="0 0 32 48">
+                <path d="M16 0c-8.837 0-16 7.163-16 16 0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z" fill="${fill}"/>
+                <circle cx="16" cy="16" r="10" fill="#fff"/>
+                <text x="16" y="20" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="${fontSize}" fill="${textColor}">${label}</text>
+            </svg>`.trim();
 
             return L.icon({
                 iconUrl: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
