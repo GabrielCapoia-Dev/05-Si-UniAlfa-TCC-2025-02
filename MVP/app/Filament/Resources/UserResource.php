@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
+use App\Services\UserService as Service;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,41 +13,19 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\IgnoredUser;
 
 class UserResource extends Resource
 {
-
     protected static ?string $model = User::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-users';
-
     public static ?string $modelLabel = 'Usuário';
-
     protected static ?string $navigationGroup = "Acesso";
-
     public static ?string $pluralModelLabel = 'Usuários';
-
     public static ?string $slug = 'usuarios';
 
     public static function getNavigationBadge(): ?string
     {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if (! $user || ! $user->hasRole('Admin')) {
-            return null;
-        }
-
-        $ignoredUserIds = IgnoredUser::where('admin_id', $user->id)
-            ->pluck('user_id')
-            ->toArray();
-
-        $count = static::getModel()::where('email_approved', false)
-            ->whereNotIn('id', $ignoredUserIds)
-            ->count();
-
-        return $count > 0 ? (string) $count : null;
+        return app(Service::class)->badgeNavegacaoParaNovosUsuarios(Auth::user());
     }
 
     public static function getNavigationBadgeTooltip(): ?string
@@ -54,119 +33,78 @@ class UserResource extends Resource
         return 'Novos Usuários';
     }
 
-
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label('Nome de usuário')
-                    ->required(),
+        return $form->schema([
+            Forms\Components\TextInput::make('name')
+                ->label('Nome de usuário')
+                ->required(),
 
-                Forms\Components\TextInput::make('email')
-                    ->label('E-mail')
-                    ->unique(ignoreRecord: true)
-                    ->email()
-                    ->required(),
+            Forms\Components\TextInput::make('email')
+                ->label('E-mail')
+                ->unique(ignoreRecord: true)
+                ->email()
+                ->required(),
 
-                Forms\Components\TextInput::make('password')
-                    ->label('Senha')
-                    ->password()
-                    ->revealable()
-                    ->dehydrateStateUsing(fn($state) => Hash::make($state))
-                    ->dehydrated(fn($state) => filled($state))
-                    ->required(fn(string $context): bool => $context === 'create'),
+            Forms\Components\TextInput::make('password')
+                ->label('Senha')
+                ->password()
+                ->revealable()
+                ->dehydrateStateUsing(fn($state) => Hash::make($state))
+                ->dehydrated(fn($state) => filled($state))
+                ->required(fn(string $context): bool => $context === 'create'),
 
-                Forms\Components\Select::make('role')
-                    ->label('Nivel de acesso')
-                    ->relationship('roles', 'name', function (Builder $query) {
+            Forms\Components\Select::make('role')
+                ->label('Nivel de acesso')
+                ->relationship('roles', 'name', function (Builder $query) {
+                    return app(Service::class)->opcoesDeRoles($query, Auth::user());
+                })
+                ->preload()
+                ->required()
+                ->disabled(fn ($context, $record) =>
+                    app(Service::class)->desabilitarCampoRole(Auth::user(), $record, $context)
+                ),
 
-                        /** @var \App\Models\User|null $user */
-                        $user = Auth::user();
-                        if (!$user || $user->hasRole('Admin')) {
-                            return $query;
-                        }
-                        return $query->where('name', '!=', 'Admin');
-                    })
-                    ->preload()
-                    ->required()
-                    ->disabled(function ($context, $record) {
-                        if ($context === 'create') {
-                            return false;
-                        }
-                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
-                            return true;
-                        }
+            Forms\Components\Toggle::make('email_approved')
+                ->label('Verificação de acesso')
+                ->inline(false)
+                ->onColor('success')
+                ->offColor('danger')
+                ->onIcon('heroicon-s-check')
+                ->offIcon('heroicon-s-x-mark')
+                ->default(true)
+                ->visible(fn ($record, $context) =>
+                    app(Service::class)->podeVerToggleAprovacaoEmail(Auth::user(), $record, $context)
+                ),
 
-                        return false;
-                    }),
-
-
-                Forms\Components\Toggle::make('email_approved')
-                    ->label('Verificação de acesso')
-                    ->inline(false)
-                    ->onColor('success')
-                    ->offColor('danger')
-                    ->onIcon('heroicon-s-check')
-                    ->offIcon('heroicon-s-x-mark')
-                    ->default(true)
-                    ->visible(function ($record, $context) {
-                        if ($context === 'create') {
-                            return true;
-                        }
-
-                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
-                            return false;
-                        }
-
-                        return true;
-                    }),
-
-                Forms\Components\Section::make('Vínculo com Escola')
-                    ->icon('heroicon-o-identification')
-                    ->description('Aqui mostra se o usuário esta vinculado a uma escola.')
-                    ->schema([
-                        Forms\Components\Select::make('id_escola')
-                            ->label('Escola')
-                            ->relationship('escola', 'nome')
-                            ->preload()
-                            ->searchable(),
-                    ])
-                    ->visible(function ($record, $context) {
-
-                        if ($context === 'create') {
-                            return true;
-                        }
-                        if ($context === 'edit') {
-                            if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
-                                return false;
-                            }
-                            return true;
-                        }
-
-                        if ($record->hasRole('Admin') || $record->id == Auth::user()->id) {
-                            return false;
-                        }
-                        return false;
-                    }),
-
-
-
-            ]);
+            Forms\Components\Section::make('Vínculo com Escola')
+                ->icon('heroicon-o-identification')
+                ->description('Aqui mostra se o usuário esta vinculado a uma escola.')
+                ->schema([
+                    Forms\Components\Select::make('id_escola')
+                        ->label('Escola')
+                        ->relationship('escola', 'nome')
+                        ->preload()
+                        ->searchable(),
+                ])
+                ->visible(fn ($record, $context) =>
+                    app(Service::class)->podeVerSecaoEscola(Auth::user(), $record, $context)
+                ),
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->paginated([10, 25, 50, 100])
-            ->checkIfRecordIsSelectableUsing(fn(User $record) => ! $record->hasRole('Admin'))
+            ->checkIfRecordIsSelectableUsing(fn(User $record) =>
+                app(Service::class)->podeSelecionarRegistro(Auth::user(), $record)
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('id_escola')
                     ->label('Escola')
                     ->searchable()
-                    ->formatStateUsing(function ($state, $record) {
-                        return $record->escola ? $record->escola->nome : '-';
-                    })
+                    ->formatStateUsing(fn($state, $record) => $record->escola?->nome ?? '-')
                     ->toggleable(isToggledHiddenByDefault: false),
 
                 Tables\Columns\TextColumn::make('name')
@@ -180,22 +118,12 @@ class UserResource extends Resource
                 Tables\Columns\ToggleColumn::make('email_approved')
                     ->label('Verificação de Acesso')
                     ->sortable()
-                    ->disabled(function ($record) {
-                        $user = Auth::user();
-
-                        // Desativa o toggle se for o próprio usuário
-                        return $user && $record && $user->id === $record->id;
-                    })
-                    ->visible(function () {
-                        /** @var \App\Models\User|null $user */
-                        $user = Auth::user();
-
-                        if (!$user) {
-                            return false;
-                        }
-
-                        return $user->hasRole('Admin');
-                    })
+                    ->disabled(fn ($record) =>
+                        app(Service::class)->desabilitarToggleAprovacaoEmail(Auth::user(), $record)
+                    )
+                    ->visible(fn () =>
+                        app(Service::class)->podeVerToggleAprovacaoEmail(Auth::user(), null, 'table')
+                    )
                     ->inline(false)
                     ->onColor('success')
                     ->offColor('danger')
@@ -212,15 +140,14 @@ class UserResource extends Resource
                         if (!$record->email_approved) {
                             return '--/--/-- --:--:--';
                         }
-
                         return $state ? $state->format('d/m/Y H:i:s') : '-';
                     }),
 
                 Tables\Columns\TextColumn::make('role')
                     ->label('Nivel de acesso')
-                    ->sortable()->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
+                    ->sortable()
+                    ->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
                     ->toggleable(isToggledHiddenByDefault: false),
-
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
@@ -233,103 +160,67 @@ class UserResource extends Resource
                     ->since()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
-
-            ])
-            ->filters([
-                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
                     ->before(function (User $record, Tables\Actions\DeleteAction $action) {
-                        $authId = Auth::id();
-
-                        if ($record->id === 1) {
-                            $action->failure();
-                            $action->halt();
-                        }
-
-                        if ($record->id === $authId) {
+                        if (! app(Service::class)->podeDeletar(Auth::user(), $record)) {
                             $action->failure();
                             $action->halt();
                         }
                     })
-                    ->disabled(function (User $record) {
-                        return $record->id === 1 || Auth::id() === $record->id;
-                    })
-                    ->visible(function () {
-                        /** @var \App\Models\User|null $user */
-                        $user = Auth::user();
-                        if (!$user) {
-                            return false;
-                        }
-                        return $user->hasRole('Admin');
-                    }),
+                    ->disabled(fn (User $record) =>
+                        // mantém mesmas regras visuais de disabled
+                        ($record->id === 1) || (Auth::id() === $record->id)
+                    )
+                    ->visible(fn () =>
+                        app(Service::class)->ehAdmin(Auth::user())
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->before(function ($records, $action) {
-                            if ($records->contains(fn($user) => $user->hasRole('Admin'))) {
+                            // $records é uma Collection
+                            if (! app(Service::class)->podeDeletarEmLote(Auth::user(), $records)) {
                                 $action->halt();
                             }
                         })
-                        ->visible(function () {
-                            /** @var \App\Models\User|null $user */
-                            $user = Auth::user();
-                            if (!$user) {
-                                return false;
-                            }
-                            return $user->hasRole('Admin');
-                        }),
+                        ->visible(fn () =>
+                            app(Service::class)->ehAdmin(Auth::user())
+                        ),
                 ])
             ]);
     }
 
     protected function getTableQuery()
     {
-        $admin = Auth::user();
-
-        $pendingUsers = static::getModel()::where('email_approved', false)->pluck('id');
-
-        foreach ($pendingUsers as $userId) {
-            IgnoredUser::firstOrCreate([
-                'admin_id' => $admin->id,
-                'user_id'  => $userId,
-            ]);
+        if ($admin = Auth::user()) {
+            app(Service::class)->sincronizarIgnoradosParaAdmin($admin);
         }
-
         return parent::getTableQuery();
     }
 
-
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
+            'index'  => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
+            'edit'   => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if ($user && !$user->hasRole('Admin')) {
-            $query->whereHas('roles', fn($q) => $q->where('name', '!=', 'Admin'));
-        }
-
-        return $query;
+        return app(Service::class)->listarUsuariosQuery(
+            parent::getEloquentQuery(),
+            Auth::user()
+        );
     }
 }
