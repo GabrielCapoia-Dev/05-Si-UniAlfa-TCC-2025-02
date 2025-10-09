@@ -195,8 +195,17 @@ class EscolaResource extends Resource
                                             ->placeholder('Ex.: Próximo ao Supermercado')
                                             ->maxLength(100),
                                     ]),
+                                Forms\Components\Select::make('tipo')
+                                    ->label('Tipo')
+                                    ->required()
+                                    ->options([
+                                        'municipal' => 'Municipal',
+                                        'estadual' => 'Estadual',
+                                    ])
+                                    ->columnSpan(7),
                             ])
                             ->columnSpan(7),
+
                     ]),
             ]);
     }
@@ -207,6 +216,11 @@ class EscolaResource extends Resource
         return $table
             ->paginated([10, 25, 50, 100])
             ->columns([
+                Tables\Columns\TextColumn::make('tipo')
+                    ->label('Tipo')
+                    ->sortable()
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('nome')
                     ->label('Nome')
                     ->sortable()
@@ -268,7 +282,15 @@ class EscolaResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\SelectFilter::make('tipo')
+                    ->label('Tipo')
+                    ->options([
+                        'municipal' => 'Municipal',
+                        'estadual' => 'Estadual',
+                    ])
+                    ->default('municipal'),
+            ])
             ->actions([
                 Tables\Actions\Action::make('viewTurmas')
                     ->label('Ver Turmas')

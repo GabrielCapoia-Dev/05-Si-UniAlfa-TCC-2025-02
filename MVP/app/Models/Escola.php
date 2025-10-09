@@ -21,6 +21,7 @@ class Escola extends Model
 
     protected $fillable = [
         'nome',
+        'tipo',
         'latitude',
         'longitude',
         'raio',
@@ -38,6 +39,7 @@ class Escola extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'nome',
+                'tipo',
                 'latitude',
                 'longitude',
                 'raio',
@@ -80,7 +82,7 @@ class Escola extends Model
         if (preg_match('/^([^\:\.]+)\s*:/u', $msg, $m)) {
             return trim($m[1]);
         }
-        foreach (['Nome', 'Logradouro', 'Bairro', 'Cidade', 'Estado', 'CEP', 'Numero', 'Número', 'Complemento'] as $col) {
+        foreach (['Nome', 'Logradouro', 'Bairro', 'Cidade', 'Estado', 'CEP', 'Numero', 'Número', 'Complemento', 'Tipo'] as $col) {
             if (stripos($msg, $col) !== false) return $col;
         }
         return null;
@@ -134,6 +136,7 @@ class Escola extends Model
             'Numero'     => ['nullable', 'string', 'max:255'],
             'Número'     => ['nullable', 'string', 'max:255'],
             'Complemento' => ['nullable', 'string', 'max:255'],
+            'Tipo'       => ['required', 'string', 'max:255', 'in:Municipal,Estadual'],
         ];
 
         $attributes = [
@@ -146,6 +149,7 @@ class Escola extends Model
             'Numero' => 'número',
             'Número' => 'número',
             'Complemento' => 'complemento',
+            'Tipo' => 'tipo',
         ];
 
         $validate = $svc->validateRows($rows, $rules, $attributes);
@@ -195,6 +199,7 @@ class Escola extends Model
                 'cep'         => $r['CEP'],
                 'numero'      => $numero,
                 'complemento' => $r['Complemento'] ?? null,
+                'tipo'        => $r['Tipo'],
             ];
         };
 
@@ -204,7 +209,7 @@ class Escola extends Model
             $affected = self::upsert(
                 $payload,
                 ['nome'],
-                ['logradouro', 'bairro', 'cidade', 'estado', 'cep', 'numero', 'complemento', 'updated_at']
+                ['logradouro', 'bairro', 'cidade', 'estado', 'cep', 'numero', 'complemento', 'tipo', 'updated_at']
             );
 
             return ['imported_or_updated' => $affected];
@@ -222,6 +227,7 @@ class Escola extends Model
             'CEP',
             'Numero',
             'Complemento',
+            'Tipo',
         ];
 
         return response()->streamDownload(function () use ($headers) {
@@ -238,6 +244,7 @@ class Escola extends Model
                 'CEP'         => '87501000',
                 'Numero'      => '123',
                 'Complemento' => 'Próximo à praça',
+                'Tipo'        => 'Municipal',
             ]);
 
             $writer->addRow([
@@ -249,6 +256,7 @@ class Escola extends Model
                 'CEP'         => '87000000',
                 'Numero'      => '456',
                 'Complemento' => '',
+                'Tipo'        => 'Estadual',
             ]);
 
             $writer->toBrowser();

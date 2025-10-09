@@ -38,7 +38,8 @@ class Aluno extends Model
         'estado',
         'cep',
         'numero',
-        'complemento'
+        'complemento',
+        'tem_carteirinha',
     ];
 
 
@@ -65,7 +66,8 @@ class Aluno extends Model
                 'estado',
                 'cep',
                 'numero',
-                'complemento'
+                'complemento',
+                'tem_carteirinha',
             ]);
     }
 

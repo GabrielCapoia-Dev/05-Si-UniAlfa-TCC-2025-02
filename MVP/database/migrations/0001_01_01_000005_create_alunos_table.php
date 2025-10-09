@@ -34,6 +34,7 @@ return new class extends Migration
             $table->string('cep')->max(8);
             $table->string('numero')->nullable();
             $table->string('complemento')->nullable();
+            $table->boolean('tem_carteirinha')->default(false);
             $table->timestamps();
 
             $table->unique(['id_turma', 'cgm']);

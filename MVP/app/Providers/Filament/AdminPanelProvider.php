@@ -89,6 +89,8 @@ class AdminPanelProvider extends PanelProvider
                 ValidaUser::class
             ])
             ->plugins([
+
+
                 ActivitylogPlugin::make()
                     ->label('Registro de Atividade')
                     ->pluralLabel('Registro de Atividades')
