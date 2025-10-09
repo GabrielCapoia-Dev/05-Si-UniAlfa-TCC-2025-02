@@ -10,6 +10,7 @@ use App\Models\Rota;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\Builder;
 
 
@@ -177,10 +178,26 @@ class AlunoService
                     }
                 }),
 
+            SelectFilter::make('turma.turno')
+                ->label('Turno')
+                ->options([
+                    'Manhã' => 'Manhã',
+                    'Tarde' => 'Tarde',
+                    'Noite' => 'Noite',
+                    'Integral' => 'Integral',
+                ])
+                ->query(function (Builder $query, array $data) {
+                    $turno = $data['value'] ?? null;
+                    if ($turno) {
+                        $query->whereHas('turma', fn($q) => $q->where('turno', $turno));
+                    }
+                }),
 
-
-
-
+            TernaryFilter::make('tem_carteirinha')
+                ->label('Tem Carteirinha')
+                ->placeholder('Todos')
+                ->trueLabel('Sim')
+                ->falseLabel('Não')
 
 
 
