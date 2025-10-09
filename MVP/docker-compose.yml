@@ -7,7 +7,7 @@ services:
     container_name: laravel-app-transporte
     working_dir: /var/www
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       - .:/var/www
       - vendor:/var/www/vendor
@@ -60,4 +60,4 @@ volumes:
 
 networks:
   laravel_transporte:
-    external: true
+    driver: bridge
