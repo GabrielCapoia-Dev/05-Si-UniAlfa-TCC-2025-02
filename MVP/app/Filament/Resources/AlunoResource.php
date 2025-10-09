@@ -134,10 +134,10 @@ class AlunoResource extends Resource
 
                                         Forms\Components\TextInput::make('nome_responsavel')
                                             ->required(fn(string $context): bool => $context === 'create')
-                                            ->label('Nome Responsalvel:'),
+                                            ->label('Nome Responsavel:'),
                                         Forms\Components\TextInput::make('telefone_responsavel')
                                             ->required(fn(string $context): bool => $context === 'create')
-                                            ->label('Telefone Responsalvel:'),
+                                            ->label('Telefone Responsavel:'),
                                         Forms\Components\TextInput::make('telefone_aluno')
                                             ->label('Telefone Aluno:'),
                                         Forms\Components\TextInput::make('telefone_alternativo')
