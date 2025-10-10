@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Controllers\ExportModeloController;
+use App\Http\Controllers\CarteirinhaPrintController;
 use App\Livewire\PasswordReset;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -34,14 +35,8 @@ class AdminPanelProvider extends PanelProvider
                     Route::get('/exportar-modelo', [ExportModeloController::class, 'handle'])
                         ->name('exportar-modelo');
                 });
-
-
-                Route::get('/boom', function () {
-                    throw new \Exception('Forçando erro 500 para testes');
-                });
-
-
-                Route::get('/password-reset', PasswordReset::class);
+                Route::get('/carteirinhas', CarteirinhaPrintController::class)
+                    ->name('carteirinhas');
             })
             ->default()
             ->id('admin')

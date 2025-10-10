@@ -13,6 +13,9 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Actions\BulkAction;
+use Illuminate\Support\Collection;
+use Filament\Notifications\Notification;
 
 use App\Models\User;
 
@@ -307,6 +310,51 @@ class AlunoService
     {
         return [
             Tables\Actions\DeleteBulkAction::make(),
+
+            BulkAction::make('exportar_carteirinhas_html')
+                ->label('Exportar (Impressão)')
+                ->icon('heroicon-o-printer')
+                ->visible(function (ListAlunos $livewire) {
+                    // (opcional) manter a regra: só aparece se ninguém na LISTAGEM tiver tem_carteirinha = false
+                    return !$livewire->getFilteredTableQuery()
+                        ->clone()
+                        ->where('tem_carteirinha', false)
+                        ->exists();
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Exportar para impressão')
+                ->modalDescription('Abriremos uma página HTML pronta para impressão (Ctrl/Cmd+P).')
+                ->action(function (Collection $records, ListAlunos $livewire) {
+                    // SOMENTE selecionados:
+                    $idsSelecionados = $records->pluck('id')->all();
+
+                    if (empty($idsSelecionados)) {
+                        Notification::make()->title('Nenhum aluno selecionado.')->danger()->send();
+                        return;
+                    }
+
+                    // Garante que todos os selecionados têm carteirinha = true
+                    $temTodos = $records->every(fn($r) => (bool) $r->tem_carteirinha === true);
+                    if (! $temTodos) {
+                        Notification::make()
+                            ->title('Seleção inválida')
+                            ->body('Todos os alunos selecionados devem ter carteirinha para exportar.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $url = route('filament.admin.carteirinhas', [
+                        'ids' => implode(',', $idsSelecionados),
+                    ]);
+
+                    $livewire->js('window.open("' . $url . '","_blank");');
+
+                    Notification::make()
+                        ->title('Página de impressão aberta com sucesso')
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 

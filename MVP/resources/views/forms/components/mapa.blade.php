@@ -146,7 +146,7 @@
           if (!this.pontos || this.pontos.length === 0) return;
 
           this.pontos.forEach((ponto, i) => {
-            if(this.rotaAtiva === false) {
+            if (this.rotaAtiva === false) {
               ponto.tipo = 'escola';
             }
             const isEscola = (ponto.tipo === 'escola');
@@ -177,7 +177,7 @@
 
             marker.bindPopup(`
               <div style="min-width:150px;">
-                <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
+              <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
                 <small>Lat: ${Number(ponto.latitude).toFixed(6)}<br>Lng: ${Number(ponto.longitude).toFixed(6)}</small>
               </div>
             `);
@@ -297,9 +297,7 @@
         <!-- gota do pin -->
         <path d="M16 0c-8.837 0-16 7.163-16 16 0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z"
               fill="${fill}"/>
-        <!-- círculo branco interno -->
         <circle cx="16" cy="16" r="10" fill="#fff"/>
-        <!-- número -->
         <text x="16" y="20" text-anchor="middle"
               font-family="Inter, Arial, sans-serif"
               font-weight="700"
