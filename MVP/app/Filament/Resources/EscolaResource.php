@@ -306,14 +306,12 @@ class EscolaResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
-
             ->headerActions([
                 FilamentExportHeaderAction::make('export')
                     ->label('Exportar')
                     ->defaultFormat('xlsx')
                     ->directDownload()
             ])
-
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

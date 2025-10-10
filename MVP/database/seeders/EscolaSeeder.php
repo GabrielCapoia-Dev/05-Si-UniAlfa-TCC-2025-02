@@ -10,6 +10,12 @@ use Faker\Factory as Faker;
 
 class EscolaSeeder extends Seeder
 {
+    // bounding box de Umuarama-PR (aprox.)
+    private const LAT_MIN = -23.84628485;
+    private const LAT_MAX = -23.75628485;
+    private const LNG_MIN = -53.40628485;
+    private const LNG_MAX = -53.20628485;
+
     public function run(): void
     {
         $faker = Faker::create('pt_BR');
@@ -86,39 +92,19 @@ class EscolaSeeder extends Seeder
         $selecionados = array_slice($todos, 0, 50);
 
         $bairros = [
-            'Centro',
-            'Zona I',
-            'Zona II',
-            'Zona VI',
-            'Zona VII',
-            'Jardim São Cristóvão',
-            'Parque Danielle',
-            'Parque Jabuticabeira',
-            'Jardim Panorama',
-            'Conjunto Guarani',
-            'Parque Industrial',
-            'Conjunto Ouro Branco',
-            'Cohapar I',
-            'Parque Dom Pedro I',
-            'Parque San Remo',
-            'Parque Vitória Régia',
-            'Jardim Alphaville',
-            'Jardim Birigui',
-            'Parque das Laranjeiras',
-            'Distrito de Lovat',
-            'Serra dos Dourados',
-            'Santa Eliza',
-            'Jardim América',
-            'Parque Bonfim',
-            'Porto Belo',
-            'Dom Bosco',
-            'Tropical'
+            'Centro','Zona I','Zona II','Zona VI','Zona VII','Jardim São Cristóvão','Parque Danielle',
+            'Parque Jabuticabeira','Jardim Panorama','Conjunto Guarani','Parque Industrial',
+            'Conjunto Ouro Branco','Cohapar I','Parque Dom Pedro I','Parque San Remo','Parque Vitória Régia',
+            'Jardim Alphaville','Jardim Birigui','Parque das Laranjeiras','Distrito de Lovat','Serra dos Dourados',
+            'Santa Eliza','Jardim América','Parque Bonfim','Porto Belo','Dom Bosco','Tropical'
         ];
 
         $payload = [];
 
         foreach ($selecionados as $nome) {
-            $tipo = str_contains(Str::lower($nome), 'colégio') || str_contains(Str::lower($nome), 'escola estadual') || str_contains(Str::lower($nome), 'ceebja')
+            $tipo = str_contains(Str::lower($nome), 'colégio')
+                 || str_contains(Str::lower($nome), 'escola estadual')
+                 || str_contains(Str::lower($nome), 'ceebja')
                 ? 'Estadual'
                 : (str_contains(Str::lower($nome), 'cmei') || str_contains(Str::lower($nome), 'cei') ? 'Municipal' : 'Municipal');
 
@@ -126,6 +112,9 @@ class EscolaSeeder extends Seeder
             $numero     = $faker->numberBetween(1, 9999);
             $bairro     = Arr::random($bairros);
             $cep        = sprintf('875%02d-%03d', $faker->numberBetween(0, 99), $faker->numberBetween(0, 999));
+
+            $lat = $this->randFloat(self::LAT_MIN, self::LAT_MAX);
+            $lng = $this->randFloat(self::LNG_MIN, self::LNG_MAX);
 
             $payload[] = [
                 'nome'        => $nome,
@@ -137,9 +126,9 @@ class EscolaSeeder extends Seeder
                 'estado'      => 'PR',
                 'cep'         => str_replace('-', '', $cep),
                 'complemento' => null,
-                'latitude'    => null,
-                'longitude'   => null,
-                'raio'        => null,
+                'latitude'    => round($lat, 6),
+                'longitude'   => round($lng, 6),
+                'raio'        => null, 
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ];
@@ -148,7 +137,15 @@ class EscolaSeeder extends Seeder
         Escola::upsert(
             $payload,
             ['nome'],
-            ['tipo', 'logradouro', 'numero', 'bairro', 'cidade', 'estado', 'cep', 'complemento', 'updated_at']
+            [
+                'tipo','logradouro','numero','bairro','cidade','estado','cep','complemento',
+                'latitude','longitude','raio','updated_at'
+            ]
         );
+    }
+
+    private function randFloat(float $min, float $max): float
+    {
+        return $min + (lcg_value() * ($max - $min));
     }
 }

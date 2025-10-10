@@ -12,7 +12,8 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\Builder;
-
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class AlunoService
 {
@@ -23,6 +24,36 @@ class AlunoService
         $cgm = $get('cgm') ?? 'sem-cgm';
         $ext = strtolower($file->getClientOriginalExtension());
         return "{$cgm}.{$ext}";
+    }
+
+    /** Retorna se é Admin (delegando ao UserService). */
+    public function ehAdmin(?User $user): bool
+    {
+        return app(UserService::class)->ehAdmin($user);
+    }
+
+    /** Opções de escolas conforme perfil: Admin vê todas; secretário só a sua. */
+    public function opcoesDeEscolasParaUsuario(?User $user): array
+    {
+        if ($this->ehAdmin($user) || empty($user?->id_escola)) {
+            return $this->opcoesDeEscolas();
+        }
+
+        return Escola::query()
+            ->whereKey($user->id_escola)
+            ->pluck('nome', 'id')
+            ->toArray();
+    }
+
+    /** Desabilita o select de escola para usuário vinculado a uma escola (não-Admin). */
+    public function deveTravarCampoEscola(?User $user): bool
+    {
+        return ! $this->ehAdmin($user) && filled($user?->id_escola);
+    }
+
+    public function escolaInicialParaForm(?Aluno $record, ?User $user): ?int
+    {
+        return $record?->turma?->id_escola ?? ($user?->id_escola ?? null);
     }
 
     /** Opções de escolas ordenadas. */
@@ -85,24 +116,25 @@ class AlunoService
     /** Mostra seção/field de Rotas apenas para Admin. */
     public function podeVerCampoRota($user): bool
     {
-        return app(UserService::class)->ehAdmin($user);
+        return $this->ehAdmin($user);
     }
 
     /** Mostra toggle “tem_carteirinha” apenas para Admin. */
     public function podeVerToggleCarteirinha($user): bool
     {
-        return app(UserService::class)->ehAdmin($user);
+        return $this->ehAdmin($user);
     }
 
 
     /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
-    public function configurarTabela(Table $table): Table
+    public function configurarTabela(Table $table, ?User $user): Table
     {
         return $table
             ->paginated([10, 25, 50, 100])
             ->columns($this->colunasTabela())
-            ->filters($this->filtrosTabela())
+            ->filters($this->filtrosTabela($user))
             ->actions($this->acoesTabela())
+            ->bulkActions($this->acoesEmMassa($user))
             ->defaultSort('nome')
             ->striped();
     }
@@ -112,7 +144,7 @@ class AlunoService
     {
         return [
             Tables\Columns\ToggleColumn::make('tem_carteirinha')
-                ->label('Tem Carteirinha')
+                ->label('Usa o Transporte?')
                 ->sortable()
                 ->inline(false)
                 ->onColor('success')
@@ -124,52 +156,92 @@ class AlunoService
                 ->label('Nome')
                 ->sortable()
                 ->searchable(),
-
-            Tables\Columns\TextColumn::make('turma.escola.nome')
-                ->label('Escola')
-                ->sortable()
-                ->formatStateUsing(
-                    fn($record) => optional($record->turma?->escola)->nome ?? '-'
-                ),
-
-            Tables\Columns\TextColumn::make('turma.turma')
-                ->label('Turma')
-                ->formatStateUsing(function ($record) {
-                    $serie = optional($record->turma?->serie)->nome;
-                    return $serie ? ($serie . ' - ' . ($record->turma?->turma ?? '-')) : '-';
-                }),
-
             Tables\Columns\TextColumn::make('cgm')
                 ->label('CGM')
                 ->sortable()
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make('telefone_responsavel')
-                ->label('Telefone Resp.'),
+            Tables\Columns\TextColumn::make('grupo_escola')
+                ->label('Escola')
+                ->html()
+                ->wrap()
+                ->getStateUsing(function ($record) {
+                    $escola = optional($record->turma?->escola)->nome ?? '-';
+                    $serie  = optional($record->turma?->serie)->nome;
+                    $turma  = $record->turma?->turma ?? '-';
+                    $turno  = $record->turma?->turno ?? '-';
+                    $rota   = $record->rota?->nome ?? '-';
 
-            Tables\Columns\TextColumn::make('telefone_aluno')
-                ->label('Telefone Aluno'),
+                    $seriesTurma = $serie ? ($serie . ' - ' . $turma) : '-';
 
-            Tables\Columns\TextColumn::make('cidade')
-                ->label('Cidade'),
+                    return collect([
+                        "<div><strong>Escola:</strong> {$escola}</div>",
+                        "<div><strong>Turma:</strong> {$seriesTurma}</div>",
+                        "<div><strong>Turno:</strong> {$turno}</div>",
+                        "<div><strong>Rota:</strong> {$rota}</div>",
+                    ])->implode('');
+                })
+                ->toggleable(isToggledHiddenByDefault: true),
 
-            Tables\Columns\TextColumn::make('estado')
-                ->label('UF'),
+            Tables\Columns\TextColumn::make('grupo_contato')
+                ->label('Contato')
+                ->html()
+                ->wrap()
+                ->getStateUsing(function ($record) {
+                    $resp  = $record->nome_responsavel ?? '-';
+                    $telR  = $record->telefone_responsavel ?? '-';
+                    $telA  = $record->telefone_aluno ?? '-';
+                    $telAlt = $record->telefone_alternativo ?? '-';
+
+                    return collect([
+                        "<div><strong>Responsável:</strong> {$resp}</div>",
+                        "<div><strong>Tel. Resp.:</strong> {$telR}</div>",
+                        "<div><strong>Tel. Aluno:</strong> {$telA}</div>",
+                        "<div><strong>Tel. Alt.:</strong> {$telAlt}</div>",
+                    ])->implode('');
+                })
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('grupo_endereco')
+                ->label('Endereço')
+                ->html()
+                ->wrap()
+                ->getStateUsing(function ($record) {
+                    $logradouro = $record->logradouro ?? '-';
+                    $numero     = $record->numero ?? '-';
+                    $bairro     = $record->bairro ?? '-';
+                    $cidade     = $record->cidade ?? '-';
+                    $estado     = $record->estado ?? '-';
+                    $cep        = $record->cep ?? '-';
+                    $compl      = $record->complemento ?? null;
+
+                    return collect([
+                        "<div><strong>Logradouro:</strong> {$logradouro}, {$numero}</div>",
+                        "<div><strong>Bairro:</strong> {$bairro}</div>",
+                        "<div><strong>Cidade/UF:</strong> {$cidade}/{$estado}</div>",
+                        "<div><strong>CEP:</strong> {$cep}</div>",
+                        $compl ? "<div><strong>Compl.:</strong> {$compl}</div>" : null,
+                    ])->filter()->implode('');
+                })
+                ->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 
     /** Filtros da listagem de alunos. */
-    public function filtrosTabela(): array
+    public function filtrosTabela(?User $user): array
     {
         return [
             SelectFilter::make('id_escola')
                 ->label('Escola')
                 ->relationship('turma.escola', 'nome')
+                ->visible(fn() => $this->ehAdmin($user))
                 ->searchable(),
 
 
             SelectFilter::make('id_serie')
                 ->label('Série')
+                ->preload()
+                ->searchable()
                 ->options($this->opcoesSeries())
                 ->query(function (Builder $query, array $data) {
                     $serie = $data['value'] ?? null;
@@ -210,6 +282,14 @@ class AlunoService
         return [
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make(),
+        ];
+    }
+
+    /** Ações em massa da tabela. */
+    public function acoesEmMassa(?User $user): array
+    {
+        return [
+            Tables\Actions\DeleteBulkAction::make(),
         ];
     }
 

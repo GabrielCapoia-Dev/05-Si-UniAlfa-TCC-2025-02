@@ -99,7 +99,7 @@ class AlunoResource extends Resource
                                             ->preload(),
 
                                         Forms\Components\Toggle::make('tem_carteirinha')
-                                            ->label('Possui carteirinha?')
+                                            ->label('Usa o Transporte?')
                                             ->default(false)
                                             ->columnSpanFull()
                                             ->visible(function () {
@@ -224,18 +224,16 @@ class AlunoResource extends Resource
                                     ->schema([
                                         Forms\Components\Select::make('id_escola')
                                             ->label('Escola')
-                                            ->options(fn() => app(AlunoService::class)->opcoesDeEscolas())
+                                            ->options(fn() => app(AlunoService::class)->opcoesDeEscolasParaUsuario(Auth::user()))
                                             ->searchable()
                                             ->preload()
                                             ->required()
-                                            ->default(
-                                                fn($record) =>
-                                                app(AlunoService::class)->escolaPadrao(
-                                                    $record,
-                                                    Auth::user()?->id_escola
-                                                )
-                                            )
+                                            ->default(fn($record) => app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()))
+                                            ->afterStateHydrated(function ($state, callable $set, $record) {
+                                                $set('id_escola', app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()));
+                                            })
                                             ->dehydrated(false)
+                                            ->disabled(fn() => app(AlunoService::class)->deveTravarCampoEscola(Auth::user()))
                                             ->reactive()
                                             ->afterStateUpdated(fn($state, callable $set) => $set('id_turma', null)),
 
@@ -264,7 +262,8 @@ class AlunoResource extends Resource
     // ================== TABELA ==================
     public static function table(Table $table): Table
     {
-        return app(AlunoService::class)->configurarTabela($table);
+        $user = Auth::user();
+        return app(AlunoService::class)->configurarTabela($table, $user);
     }
 
     public static function getRelations(): array
