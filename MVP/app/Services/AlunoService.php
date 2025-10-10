@@ -7,12 +7,13 @@ use App\Models\Escola;
 use App\Models\Serie;
 use App\Models\Turma;
 use App\Models\Rota;
+use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
+
 use App\Models\User;
 
 class AlunoService
@@ -280,8 +281,24 @@ class AlunoService
     public function acoesTabela(): array
     {
         return [
+            Tables\Actions\Action::make('visualizar')
+                ->label('Ver Detalhes')
+                ->icon('heroicon-m-eye')
+                ->color('info')
+                ->action(function (Aluno $record, $livewire) {
+                    $livewire->dispatch('abrirDetalhesAluno', $record->id);
+                }),
             Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->before(function ($record, Tables\Actions\DeleteAction $action) {
+                    $livewire = $action->getLivewire();
+
+                    if ($livewire instanceof ListAlunos) {
+                        if ($livewire->alunoSelecionado && $livewire->alunoSelecionado->id === $record->id) {
+                            $livewire->fecharDetalhesAluno();
+                        }
+                    }
+                }),
         ];
     }
 
