@@ -44,7 +44,6 @@ class AlunoResource extends Resource
                             ->label('Nome:')
                             ->columnSpan(2)
                             ->required()
-                            ->unique(ignoreRecord: true)
                             ->maxLength(255),
 
                         Forms\Components\DatePicker::make('data_nascimento')

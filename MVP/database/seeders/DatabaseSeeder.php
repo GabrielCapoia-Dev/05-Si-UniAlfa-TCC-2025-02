@@ -55,6 +55,10 @@ class DatabaseSeeder extends Seeder
             'Criar Alunos',
             'Editar Alunos',
             'Excluir Alunos',
+            'Listar Rotas',
+            'Criar Rotas',
+            'Editar Rotas',
+            'Excluir Rotas',
         ];
 
         $secretarioPermissionsList = [

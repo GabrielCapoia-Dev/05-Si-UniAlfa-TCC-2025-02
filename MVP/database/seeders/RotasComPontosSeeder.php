@@ -94,7 +94,6 @@ class RotasComPontosSeeder extends Seeder
             PontosDeParada::insert($payload);
         }
 
-        $this->command->info('✅ Rotas geradas com pontos/escolas em sequência lógica (vizinho mais próximo).');
     }
 
     private function randFloat(float $min, float $max): float

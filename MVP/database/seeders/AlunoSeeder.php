@@ -50,7 +50,7 @@ class AlunoSeeder extends Seeder
         $turmas = Turma::with('serie','escola')->get();
 
         foreach ($turmas as $turma) {
-            $qtd = rand(18, 35);
+            $qtd = rand(1,4);
 
             for ($i = 0; $i < $qtd; $i++) {
 

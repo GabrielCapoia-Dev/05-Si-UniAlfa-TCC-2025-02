@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Aluno;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CarteirinhaPrintController extends Controller
 {
@@ -19,7 +20,12 @@ class CarteirinhaPrintController extends Controller
             ->whereIn('id', $ids)
             ->where('tem_carteirinha', true)
             ->orderBy('nome')
-            ->get();
+            ->get()
+            ->map(function ($aluno) {
+                // Busca a foto do aluno baseada no CGM
+                $aluno->foto_web_url = $this->buscarFotoAluno($aluno->cgm);
+                return $aluno;
+            });
 
         abort_if($alunos->isEmpty(), 404, 'Nenhum aluno com carteirinha encontrado.');
 
@@ -30,5 +36,29 @@ class CarteirinhaPrintController extends Controller
         ];
 
         return view('pdf.carteirinhas', compact('alunos', 'template'));
+    }
+
+    /**
+     * Busca a foto do aluno por CGM
+     * Procura por extensões: jpeg, jpg, png
+     */
+    private function buscarFotoAluno(?string $cgm): string
+    {
+        if (empty($cgm)) {
+            return asset('images/avatar-placeholder.png'); // foto padrão
+        }
+
+        $extensoes = ['jpeg', 'jpg', 'png'];
+        
+        foreach ($extensoes as $ext) {
+            $caminho = "alunos/{$cgm}.{$ext}";
+            
+            if (Storage::disk('public')->exists($caminho)) {
+                return asset("storage/{$caminho}");
+            }
+        }
+
+        // Se não encontrar, retorna placeholder
+        return asset('images/avatar-placeholder.png');
     }
 }
