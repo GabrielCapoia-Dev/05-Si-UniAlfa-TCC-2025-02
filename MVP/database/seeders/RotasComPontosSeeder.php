@@ -17,7 +17,7 @@ class RotasComPontosSeeder extends Seeder
     private const LNG_MAX = -53.20628485;
 
     // Quantidade de rotas
-    private const QTD_ROTAS = 102;
+    private const QTD_ROTAS = 135;
 
     // Turnos
     private const TURNOS = ['Manhã', 'Tarde', 'Noite', 'Integral'];
@@ -41,7 +41,7 @@ class RotasComPontosSeeder extends Seeder
             ]);
 
             // Seleciona 4–7 escolas aleatórias e vincula
-            $qtdEscolas = rand(4, 7);
+            $qtdEscolas = rand(2, 4);
             $escolasDaRota = $escolas->random($qtdEscolas)->values();
             $rota->escolas()->attach($escolasDaRota->pluck('id')->all());
 
@@ -61,7 +61,7 @@ class RotasComPontosSeeder extends Seeder
                 ];
             }
 
-            $qtdPontosLivres = rand(6, 10);
+            $qtdPontosLivres = rand(3, 5);
             for ($k = 0; $k < $qtdPontosLivres; $k++) {
                 $pontos[] = [
                     'id_rota'   => $rota->id,

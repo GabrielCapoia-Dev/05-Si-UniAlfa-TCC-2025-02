@@ -44,13 +44,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Escola::class, EscolaPolicy::class);
         Gate::policy(Turma::class, TurmaPolicy::class);
         Gate::policy(Aluno::class, AlunoPolicy::class);
+        Gate::define('admin-only', function ($user) {
+            return $user->hasRole('Admin');
+        });
 
         FilamentAsset::register([
             Css::make('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'),
             Js::make('leaflet-js',  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'),
         ]);
-        Gate::define('admin-only', function ($user) {
-            return $user->hasRole('Admin');
-        });
     }
 }

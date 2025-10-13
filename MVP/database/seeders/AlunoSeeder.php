@@ -17,29 +17,90 @@ class AlunoSeeder extends Seeder
 
         // 15 primeiros nomes (mistos)
         $primeiros = [
-            'Maria','Ana','João','Gabriel','Pedro','Lucas','Luiza','Julia','Miguel','Guilherme',
-            'Mariana','Matheus','Beatriz','Rafael','Felipe',
+            'Maria',
+            'Ana',
+            'João',
+            'Gabriel',
+            'Pedro',
+            'Lucas',
+            'Luiza',
+            'Julia',
+            'Miguel',
+            'Guilherme',
+            'Mariana',
+            'Matheus',
+            'Beatriz',
+            'Rafael',
+            'Felipe',
         ];
 
         // 15 nomes do meio (bem comuns no BR)
         $meios = [
-            'Aparecida','Clara','Eduarda','Fernanda','Sofia','Carolina','Vitória','Cristina','Letícia','Bianca',
-            'Augusto','Henrique','Eduardo','André','César',
+            'Aparecida',
+            'Clara',
+            'Eduarda',
+            'Fernanda',
+            'Sofia',
+            'Carolina',
+            'Vitória',
+            'Cristina',
+            'Letícia',
+            'Bianca',
+            'Augusto',
+            'Henrique',
+            'Eduardo',
+            'André',
+            'César',
         ];
 
         // 15 sobrenomes
         $sobrenomes = [
-            'Silva','Santos','Oliveira','Souza','Rodrigues','Ferreira','Alves','Pereira','Lima','Gomes',
-            'Ribeiro','Carvalho','Almeida','Costa','Martins',
+            'Silva',
+            'Santos',
+            'Oliveira',
+            'Souza',
+            'Rodrigues',
+            'Ferreira',
+            'Alves',
+            'Pereira',
+            'Lima',
+            'Gomes',
+            'Ribeiro',
+            'Carvalho',
+            'Almeida',
+            'Costa',
+            'Martins',
         ];
 
         // Bairros de Umuarama (amostra)
         $bairros = [
-            'Centro','Zona I','Zona II','Zona VI','Zona VII','Jardim São Cristóvão','Parque Danielle',
-            'Parque Jabuticabeira','Jardim Panorama','Conjunto Guarani','Parque Industrial',
-            'Conjunto Ouro Branco','Cohapar I','Parque Dom Pedro I','Parque San Remo','Parque Vitória Régia',
-            'Jardim Alphaville','Jardim Birigui','Parque das Laranjeiras','Distrito de Lovat','Serra dos Dourados',
-            'Santa Eliza','Jardim América','Parque Bonfim','Porto Belo','Dom Bosco','Tropical'
+            'Centro',
+            'Zona I',
+            'Zona II',
+            'Zona VI',
+            'Zona VII',
+            'Jardim São Cristóvão',
+            'Parque Danielle',
+            'Parque Jabuticabeira',
+            'Jardim Panorama',
+            'Conjunto Guarani',
+            'Parque Industrial',
+            'Conjunto Ouro Branco',
+            'Cohapar I',
+            'Parque Dom Pedro I',
+            'Parque San Remo',
+            'Parque Vitória Régia',
+            'Jardim Alphaville',
+            'Jardim Birigui',
+            'Parque das Laranjeiras',
+            'Distrito de Lovat',
+            'Serra dos Dourados',
+            'Santa Eliza',
+            'Jardim América',
+            'Parque Bonfim',
+            'Porto Belo',
+            'Dom Bosco',
+            'Tropical'
         ];
 
         // Para garantir CGM único global
@@ -47,10 +108,10 @@ class AlunoSeeder extends Seeder
         $cgmsIndex  = array_flip($cgmsUsados);
 
         // Carrega todas as turmas com suas séries (p/ idade)
-        $turmas = Turma::with('serie','escola')->get();
+        $turmas = Turma::with('serie', 'escola')->get();
 
         foreach ($turmas as $turma) {
-            $qtd = rand(1,4);
+            $qtd = rand(1, 4);
 
             for ($i = 0; $i < $qtd; $i++) {
 
@@ -58,17 +119,17 @@ class AlunoSeeder extends Seeder
 
                 $idadeAlvo = $this->idadePorSerie($turma->serie?->nome ?? '');
                 $dataNasc  = $faker->dateTimeBetween("-{$idadeAlvo['max']} years", "-{$idadeAlvo['min']} years")
-                                   ->format('Y-m-d');
+                    ->format('Y-m-d');
 
-                $cep = sprintf('875%02d%03d', rand(0,99), rand(0,999)); // 8 dígitos, sem hífen
+                $cep = sprintf('875%02d%03d', rand(0, 99), rand(0, 999)); // 8 dígitos, sem hífen
                 $bairro = Arr::random($bairros);
 
                 $cgm = $this->gerarCGMUnico($cgmsIndex); // sempre único
 
                 // Telefones (DDD 44)
                 $telResp = $this->telefoneMovel();
-                $telAluno = rand(0,1) ? $this->telefoneMovel() : null;
-                $telAlt   = rand(0,1) ? $this->telefoneFixo()  : null;
+                $telAluno = rand(0, 1) ? $this->telefoneMovel() : null;
+                $telAlt   = rand(0, 1) ? $this->telefoneFixo()  : null;
 
                 Aluno::create([
                     'id_turma'            => $turma->id,
@@ -79,9 +140,9 @@ class AlunoSeeder extends Seeder
                     'sexo'                => $sexo,
                     'foto'                => null, // opcional
                     'nome_responsavel'    => $this->nomeResponsavel($primeiros, $sobrenomes),
-                    'telefone_responsavel'=> $telResp,
+                    'telefone_responsavel' => $telResp,
                     'telefone_aluno'      => $telAluno,
-                    'telefone_alternativo'=> $telAlt,
+                    'telefone_alternativo' => $telAlt,
                     'latitude'            => null,
                     'longitude'           => null,
                     'raio'                => null,
@@ -91,8 +152,8 @@ class AlunoSeeder extends Seeder
                     'cidade'              => 'Umuarama',
                     'estado'              => 'PR',
                     'cep'                 => $cep, // sem hífen (sua migration espera até 8 chars)
-                    'complemento'         => rand(0,1) ? 'Próx. à escola' : null,
-                    'tem_carteirinha'     => (bool) rand(0,1), // ou deixe default false se preferir
+                    'complemento'         => rand(0, 1) ? 'Próx. à escola' : null,
+                    'tem_carteirinha'     => (bool) rand(0, 1), // ou deixe default false se preferir
                 ]);
             }
         }
@@ -104,21 +165,21 @@ class AlunoSeeder extends Seeder
      */
     private function gerarNomeCompleto(array $primeiros, array $meios, array $sobrenomes): array
     {
-        $sexo = rand(0,1) ? 'Masculino' : 'Feminino';
+        $sexo = rand(0, 1) ? 'Masculino' : 'Feminino';
 
         if ($sexo === 'Masculino') {
-            $candidatos = ['João','Gabriel','Pedro','Lucas','Miguel','Guilherme','Matheus','Rafael','Felipe'];
+            $candidatos = ['João', 'Gabriel', 'Pedro', 'Lucas', 'Miguel', 'Guilherme', 'Matheus', 'Rafael', 'Felipe'];
             $primeiro = Arr::random(array_merge($candidatos, $primeiros));
         } else {
-            $candidatas = ['Maria','Ana','Luiza','Julia','Mariana','Beatriz'];
+            $candidatas = ['Maria', 'Ana', 'Luiza', 'Julia', 'Mariana', 'Beatriz'];
             $primeiro = Arr::random(array_merge($candidatas, $primeiros));
         }
 
-        $temMeio = (bool) rand(0,1);
+        $temMeio = (bool) rand(0, 1);
         $meio = $temMeio ? Arr::random($meios) : null;
 
         $sob1 = Arr::random($sobrenomes);
-        $sob2 = rand(0,1) ? Arr::random($sobrenomes) : null;
+        $sob2 = rand(0, 1) ? Arr::random($sobrenomes) : null;
 
         $partes = [$primeiro];
         if ($meio)  $partes[] = $meio;
@@ -194,7 +255,7 @@ class AlunoSeeder extends Seeder
     {
         $p = Arr::random($primeiros);
         $s1 = Arr::random($sobrenomes);
-        $s2 = rand(0,1) ? Arr::random($sobrenomes) : null;
+        $s2 = rand(0, 1) ? Arr::random($sobrenomes) : null;
 
         return $p . ' ' . $s1 . ($s2 && $s2 !== $s1 ? ' ' . $s2 : '');
     }
