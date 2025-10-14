@@ -183,5 +183,13 @@ class DatabaseSeeder extends Seeder
         foreach ($seriesList as $seriesName) {
             Serie::firstOrCreate(['nome' => $seriesName]);
         }
+
+        $this->call([
+            EscolaSeeder::class,
+            TurmaSeeder::class,
+            AlunoSeeder::class,
+            RotasComPontosSeeder::class,
+            SecretariosPorEscolaSeeder::class
+        ]);
     }
 }

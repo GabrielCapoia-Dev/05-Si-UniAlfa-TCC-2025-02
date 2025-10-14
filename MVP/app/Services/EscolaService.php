@@ -9,6 +9,8 @@ use App\Models\User;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Notifications\Notification;
+
 
 class EscolaService
 {
@@ -146,7 +148,8 @@ class EscolaService
                     ],
                 ])),
             Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\DeleteAction::make()
+            ->action(fn($record) => $this->deletarEscola($record)),
         ];
     }
 
@@ -154,12 +157,47 @@ class EscolaService
     protected function acoesEmMassa(?User $user): array
     {
         return [
-            Tables\Actions\DeleteBulkAction::make(),
-
             FilamentExportBulkAction::make('exportar_filtrados')
                 ->label('Exportar XLSX')
                 ->defaultFormat('xlsx')
                 ->directDownload(),
         ];
     }
+
+public function deletarEscola($record): bool
+{
+    $relacionamentos = [
+        'turmas',
+        'users',
+        'rotas',
+    ];
+
+    foreach ($relacionamentos as $rel) {
+        if (method_exists($record, $rel) && $record->$rel()->exists()) {
+
+            if($rel == "users")
+            {
+                $rel = "usuários";
+            }
+
+            Notification::make()
+                ->title('Operação cancelada')
+                ->body("Não foi possível excluir esta escola pois esta vinculada a {$rel}.")
+                ->danger()
+                ->send();
+
+            return false;
+        }
+    }
+
+    $record->delete();
+
+    Notification::make()
+        ->title('Escola excluída com sucesso')
+        ->success()
+        ->send();
+
+    return true;
+}
+
 }
