@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
 use App\Models\Aluno;
 use App\Models\Escola;
 use App\Models\Serie;
@@ -138,9 +139,21 @@ class AlunoService
             ->columns($this->colunasTabela())
             ->filters($this->filtrosTabela($user))
             ->actions($this->acoesTabela())
+            ->headerActions($this->exportarXLSX())
             ->bulkActions($this->acoesEmMassa($user))
             ->defaultSort('nome')
             ->striped();
+    }
+
+    /** Exportar uma planilha xlsx com download direto */
+    public function exportarXLSX()
+    {
+        return [
+            FilamentExportHeaderAction::make('export')
+                ->label('Exportar')
+                ->defaultFormat('xlsx')
+                ->directDownload()
+        ];
     }
 
     /** Colunas da listagem de alunos. */
@@ -165,69 +178,111 @@ class AlunoService
                 ->sortable()
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make('grupo_escola')
+            Tables\Columns\TextColumn::make('escola')
                 ->label('Escola')
-                ->html()
-                ->wrap()
+                ->getStateUsing(fn($record) => optional($record->turma?->escola)->nome ?? '-')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+
+            Tables\Columns\TextColumn::make('serie')
+                ->label('Série')
+                ->getStateUsing(fn($record) => optional($record->turma?->serie)->nome ?? '-')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+
+            Tables\Columns\TextColumn::make('turma')
+                ->label('Turma')
+                ->getStateUsing(fn($record) => $record->turma?->turma ?? '-')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+
+            Tables\Columns\TextColumn::make('nome_responsavel')
+                ->label('Nome Responsavel')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+            Tables\Columns\TextColumn::make('telefone_responsavel')
+                ->label('Telefone Responsável')
+                ->sortable()
+                ->searchable()
+                ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
-                    $escola = optional($record->turma?->escola)->nome ?? '-';
-                    $serie  = optional($record->turma?->serie)->nome;
-                    $turma  = $record->turma?->turma ?? '-';
-                    $turno  = $record->turma?->turno ?? '-';
-                    $rota   = $record->rota?->nome ?? '-';
-
-                    $seriesTurma = $serie ? ($serie . ' - ' . $turma) : '-';
-
-                    return collect([
-                        "<div><strong>Escola:</strong> {$escola}</div>",
-                        "<div><strong>Turma:</strong> {$seriesTurma}</div>",
-                        "<div><strong>Turno:</strong> {$turno}</div>",
-                        "<div><strong>Rota:</strong> {$rota}</div>",
-                    ])->implode('');
+                    $telefone = $record->telefone_responsavel;
+                    return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->toggleable(isToggledHiddenByDefault: false),
 
-            Tables\Columns\TextColumn::make('grupo_contato')
-                ->label('Contato')
-                ->html()
-                ->wrap()
+            Tables\Columns\TextColumn::make('telefone_aluno')
+                ->label('Telefone Aluno')
+                ->sortable()
+                ->searchable()
+                ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
-                    $resp  = $record->nome_responsavel ?? '-';
-                    $telR  = $record->telefone_responsavel ?? '-';
-                    $telA  = $record->telefone_aluno ?? '-';
-                    $telAlt = $record->telefone_alternativo ?? '-';
-
-                    return collect([
-                        "<div><strong>Responsável:</strong> {$resp}</div>",
-                        "<div><strong>Tel. Resp.:</strong> {$telR}</div>",
-                        "<div><strong>Tel. Aluno:</strong> {$telA}</div>",
-                        "<div><strong>Tel. Alt.:</strong> {$telAlt}</div>",
-                    ])->implode('');
+                    $telefone = $record->telefone_aluno;
+                    return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->toggleable(isToggledHiddenByDefault: false),
 
-            Tables\Columns\TextColumn::make('grupo_endereco')
-                ->label('Endereço')
-                ->html()
-                ->wrap()
+            Tables\Columns\TextColumn::make('telefone_alternativo')
+                ->label('Telefone')
+                ->sortable()
+                ->searchable()
+                ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
-                    $logradouro = $record->logradouro ?? '-';
-                    $numero     = $record->numero ?? '-';
-                    $bairro     = $record->bairro ?? '-';
-                    $cidade     = $record->cidade ?? '-';
-                    $estado     = $record->estado ?? '-';
-                    $cep        = $record->cep ?? '-';
-                    $compl      = $record->complemento ?? null;
-
-                    return collect([
-                        "<div><strong>Logradouro:</strong> {$logradouro}, {$numero}</div>",
-                        "<div><strong>Bairro:</strong> {$bairro}</div>",
-                        "<div><strong>Cidade/UF:</strong> {$cidade}/{$estado}</div>",
-                        "<div><strong>CEP:</strong> {$cep}</div>",
-                        $compl ? "<div><strong>Compl.:</strong> {$compl}</div>" : null,
-                    ])->filter()->implode('');
+                    $telefone = $record->telefone_alternativo;
+                    return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->toggleable(isToggledHiddenByDefault: false),
+
+            Tables\Columns\TextColumn::make('logradouro')
+                ->label('Logradouro')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+                Tables\Columns\TextColumn::make('bairro')
+                ->label('Bairro')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+                
+                Tables\Columns\TextColumn::make('cidade')
+                ->label('Cidade')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+                Tables\Columns\TextColumn::make('numero')
+                ->label('Número')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+                Tables\Columns\TextColumn::make('estado')
+                ->label('Estado')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+                Tables\Columns\TextColumn::make('cep')
+                ->label('CEP')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+                Tables\Columns\TextColumn::make('complemento')
+                ->label('Complemento')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
         ];
     }
 
@@ -303,6 +358,21 @@ class AlunoService
                     }
                 }),
         ];
+    }
+
+    /** regex na coluna de telefone da tabela */
+    public function regexTelefone($telefone)
+    {
+        $numeros = preg_replace('/\D/', '', $telefone);
+        if (strlen($numeros) === 11) {
+            return sprintf(
+                '(%s) %s-%s',
+                substr($numeros, 0, 2),
+                substr($numeros, 2, 5),
+                substr($numeros, 7, 4)
+            );
+        }
+        return $telefone;
     }
 
     /** Ações em massa da tabela. */
