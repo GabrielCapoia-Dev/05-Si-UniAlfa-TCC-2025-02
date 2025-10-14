@@ -12,7 +12,8 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Http;
 use Filament\Forms\Components\Grid;
 use App\Forms\Components\Mapa;
-use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
+use App\Services\EscolaService;
+use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Hidden;
 
 class EscolaResource extends Resource
@@ -211,112 +212,11 @@ class EscolaResource extends Resource
     }
 
 
+
     public static function table(Table $table): Table
     {
-        return $table
-            ->paginated([10, 25, 50, 100])
-            ->columns([
-                Tables\Columns\TextColumn::make('tipo')
-                    ->label('Tipo')
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('nome')
-                    ->label('Nome')
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('logradouro')
-                    ->label('Logradouro')
-                    ->wrap()
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('bairro')
-                    ->label('Bairro')
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('cidade')
-                    ->label('Cidade')
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('estado')
-                    ->label('UF')
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('cep')
-                    ->label('CEP')
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('numero')
-                    ->label('Número')
-                    ->toggleable()
-                    ->sortable()
-                    ->searchable(),
-
-                Tables\Columns\TextColumn::make('complemento')
-                    ->label('Complemento')
-                    ->wrap()
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Atualizado em')
-                    ->dateTime()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-            ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('tipo')
-                    ->label('Tipo')
-                    ->options([
-                        'municipal' => 'Municipal',
-                        'estadual' => 'Estadual',
-                    ])
-                    ->default('municipal'),
-            ])
-            ->actions([
-                Tables\Actions\Action::make('viewTurmas')
-                    ->label('Ver Turmas')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->url(fn($record) => route('filament.admin.resources.turmas.index', [
-                        'tableFilters' => [
-                            'id_escola' => [
-                                'value' => $record->id,
-                            ],
-                        ],
-                    ])),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->headerActions([
-                FilamentExportHeaderAction::make('export')
-                    ->label('Exportar')
-                    ->defaultFormat('xlsx')
-                    ->directDownload()
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+        $user = Auth::user();
+        return app(EscolaService::class)->configurarTabela($table, $user);
     }
 
 
