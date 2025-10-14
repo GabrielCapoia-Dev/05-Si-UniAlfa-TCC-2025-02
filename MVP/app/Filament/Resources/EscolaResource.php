@@ -200,8 +200,8 @@ class EscolaResource extends Resource
                                     ->label('Tipo')
                                     ->required()
                                     ->options([
-                                        'municipal' => 'Municipal',
-                                        'estadual' => 'Estadual',
+                                        'Municipal' => 'Municipal',
+                                        'Estadual' => 'Estadual',
                                     ])
                                     ->columnSpan(7),
                             ])
