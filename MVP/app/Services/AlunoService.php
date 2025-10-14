@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use App\Models\Aluno;
 use App\Models\Escola;
 use App\Models\Serie;
@@ -31,43 +32,28 @@ class AlunoService
         return "{$cgm}.{$ext}";
     }
 
-    /** Retorna se é Admin (delegando ao UserService). */
-    public function ehAdmin(?User $user): bool
+    /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
+    public function configurarTabela(Table $table, ?User $user): Table
     {
-        return app(UserService::class)->ehAdmin($user);
-    }
-
-    /** Opções de escolas conforme perfil: Admin vê todas; secretário só a sua. */
-    public function opcoesDeEscolasParaUsuario(?User $user): array
-    {
-        if ($this->ehAdmin($user) || empty($user?->id_escola)) {
-            return $this->opcoesDeEscolas();
-        }
-
-        return Escola::query()
-            ->whereKey($user->id_escola)
-            ->pluck('nome', 'id')
-            ->toArray();
+        return $table
+            ->paginated([10, 25, 50, 100])
+            ->columns($this->colunasTabela())
+            ->filters($this->filtrosTabela($user))
+            ->actions($this->acoesTabela())
+            ->bulkActions($this->acoesEmMassa($user))
+            ->defaultSort('nome')
+            ->striped();
     }
 
     /** Desabilita o select de escola para usuário vinculado a uma escola (não-Admin). */
     public function deveTravarCampoEscola(?User $user): bool
     {
-        return ! $this->ehAdmin($user) && filled($user?->id_escola);
+        return ! app(UserService::class)->ehAdmin($user) && filled($user?->id_escola);
     }
 
     public function escolaInicialParaForm(?Aluno $record, ?User $user): ?int
     {
         return $record?->turma?->id_escola ?? ($user?->id_escola ?? null);
-    }
-
-    /** Opções de escolas ordenadas. */
-    public function opcoesDeEscolas(): array
-    {
-        return Escola::query()
-            ->orderBy('nome')
-            ->pluck('nome', 'id')
-            ->toArray();
     }
 
     /** Escola padrão no form (record->turma->escola ou do usuário). */
@@ -121,43 +107,17 @@ class AlunoService
     /** Mostra seção/field de Rotas apenas para Admin. */
     public function podeVerCampoRota($user): bool
     {
-        return $this->ehAdmin($user);
+        return app(UserService::class)->ehAdmin($user);
     }
 
     /** Mostra toggle “tem_carteirinha” apenas para Admin. */
     public function podeVerToggleCarteirinha($user): bool
     {
-        return $this->ehAdmin($user);
-    }
-
-
-    /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
-    public function configurarTabela(Table $table, ?User $user): Table
-    {
-        return $table
-            ->paginated([10, 25, 50, 100])
-            ->columns($this->colunasTabela())
-            ->filters($this->filtrosTabela($user))
-            ->actions($this->acoesTabela())
-            ->headerActions($this->exportarXLSX())
-            ->bulkActions($this->acoesEmMassa($user))
-            ->defaultSort('nome')
-            ->striped();
-    }
-
-    /** Exportar uma planilha xlsx com download direto */
-    public function exportarXLSX()
-    {
-        return [
-            FilamentExportHeaderAction::make('export')
-                ->label('Exportar')
-                ->defaultFormat('xlsx')
-                ->directDownload()
-        ];
+        return app(UserService::class)->ehAdmin($user);
     }
 
     /** Colunas da listagem de alunos. */
-    public function colunasTabela(): array
+    protected function colunasTabela(): array
     {
         return [
             Tables\Columns\ToggleColumn::make('tem_carteirinha')
@@ -178,25 +138,22 @@ class AlunoService
                 ->sortable()
                 ->searchable(),
 
-            Tables\Columns\TextColumn::make('escola')
+            Tables\Columns\TextColumn::make('turma.escola.nome')
                 ->label('Escola')
-                ->getStateUsing(fn($record) => optional($record->turma?->escola)->nome ?? '-')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
 
-            Tables\Columns\TextColumn::make('serie')
+            Tables\Columns\TextColumn::make('turma.serie.nome')
                 ->label('Série')
-                ->getStateUsing(fn($record) => optional($record->turma?->serie)->nome ?? '-')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
 
-            Tables\Columns\TextColumn::make('turma')
+            Tables\Columns\TextColumn::make('turma.turma')
                 ->label('Turma')
-                ->getStateUsing(fn($record) => $record->turma?->turma ?? '-')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
@@ -247,37 +204,37 @@ class AlunoService
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
-                Tables\Columns\TextColumn::make('bairro')
+            Tables\Columns\TextColumn::make('bairro')
                 ->label('Bairro')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
-                
-                Tables\Columns\TextColumn::make('cidade')
+
+            Tables\Columns\TextColumn::make('cidade')
                 ->label('Cidade')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
-                Tables\Columns\TextColumn::make('numero')
+            Tables\Columns\TextColumn::make('numero')
                 ->label('Número')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
-                Tables\Columns\TextColumn::make('estado')
+            Tables\Columns\TextColumn::make('estado')
                 ->label('Estado')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
-                Tables\Columns\TextColumn::make('cep')
+            Tables\Columns\TextColumn::make('cep')
                 ->label('CEP')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: false),
 
-                Tables\Columns\TextColumn::make('complemento')
+            Tables\Columns\TextColumn::make('complemento')
                 ->label('Complemento')
                 ->sortable()
                 ->searchable()
@@ -287,13 +244,13 @@ class AlunoService
     }
 
     /** Filtros da listagem de alunos. */
-    public function filtrosTabela(?User $user): array
+    protected function filtrosTabela(?User $user): array
     {
         return [
             SelectFilter::make('id_escola')
                 ->label('Escola')
                 ->relationship('turma.escola', 'nome')
-                ->visible(fn() => $this->ehAdmin($user))
+                ->visible(fn() => app(UserService::class)->ehAdmin($user))
                 ->searchable(),
 
 
@@ -336,7 +293,7 @@ class AlunoService
     }
 
     /** Ações da tabela. */
-    public function acoesTabela(): array
+    protected function acoesTabela(): array
     {
         return [
             Tables\Actions\Action::make('visualizar')
@@ -372,30 +329,45 @@ class AlunoService
                 substr($numeros, 7, 4)
             );
         }
+
+        if (strlen($numeros) === 10) {
+            return sprintf(
+                '(%s) %s-%s',
+                substr($numeros, 0, 2),
+                substr($numeros, 2, 4),
+                substr($numeros, 6, 4)
+            );
+        }
         return $telefone;
     }
 
     /** Ações em massa da tabela. */
-    public function acoesEmMassa(?User $user): array
+    protected function acoesEmMassa(?User $user): array
     {
         return [
             Tables\Actions\DeleteBulkAction::make(),
 
+            FilamentExportBulkAction::make('exportar_filtrados')
+                ->label('Exportar XLSX')
+                ->defaultFormat('xlsx')
+                ->formatStates([
+                    'tem_carteirinha' => fn($record) => $record->tem_carteirinha ? 'Sim' : 'Não',
+                ])
+                ->directDownload(),
+
             BulkAction::make('exportar_carteirinhas_html')
-                ->label('Exportar (Impressão)')
+                ->label('Imprimir Carteirinhas')
+                ->color('info')
                 ->icon('heroicon-o-printer')
                 ->visible(function (ListAlunos $livewire) {
-                    // (opcional) manter a regra: só aparece se ninguém na LISTAGEM tiver tem_carteirinha = false
                     return !$livewire->getFilteredTableQuery()
                         ->clone()
                         ->where('tem_carteirinha', false)
                         ->exists();
                 })
                 ->requiresConfirmation()
-                ->modalHeading('Exportar para impressão')
-                ->modalDescription('Abriremos uma página HTML pronta para impressão (Ctrl/Cmd+P).')
+                ->modalHeading('Abrir pagina para impressão?')
                 ->action(function (Collection $records, ListAlunos $livewire) {
-                    // SOMENTE selecionados:
                     $idsSelecionados = $records->pluck('id')->all();
 
                     if (empty($idsSelecionados)) {
@@ -403,7 +375,6 @@ class AlunoService
                         return;
                     }
 
-                    // Garante que todos os selecionados têm carteirinha = true
                     $temTodos = $records->every(fn($r) => (bool) $r->tem_carteirinha === true);
                     if (! $temTodos) {
                         Notification::make()
