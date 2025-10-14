@@ -11,6 +11,7 @@ use App\Services\AlunoService;
 use App\Services\UserService;
 use App\Models\Serie;
 use App\Models\Escola;
+use App\Services\EscolaService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -223,7 +224,7 @@ class AlunoResource extends Resource
                                     ->schema([
                                         Forms\Components\Select::make('id_escola')
                                             ->label('Escola')
-                                            ->options(fn() => app(AlunoService::class)->opcoesDeEscolasParaUsuario(Auth::user()))
+                                            ->options(fn() => app(EscolaService::class)->opcoesDeEscolasParaUsuario(Auth::user()))
                                             ->searchable()
                                             ->preload()
                                             ->required()
