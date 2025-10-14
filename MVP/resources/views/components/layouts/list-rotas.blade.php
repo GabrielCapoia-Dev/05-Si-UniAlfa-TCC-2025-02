@@ -53,7 +53,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // ===== Visor de Rotas (somente leitura) =====
         window.MapaRotaVisor = window.MapaRotaVisor || function(opts = {}) {
             return {
                 pontos: opts.pontos ?? [],
@@ -61,14 +60,13 @@
                 zoom: opts.zoom ?? 13,
                 rotaAtiva: opts.rotaAtiva ?? true,
 
-                // ▼ novos parâmetros
                 raioEscola: opts.raioEscola ?? 2000,
                 raioPonto: opts.raioPonto ?? 500,
 
                 map: null,
                 markers: [],
                 routeGroup: null,
-                circlesGroup: null, // ▼ novo
+                circlesGroup: null,
 
                 init() {
                     if (this.map) return;
@@ -85,7 +83,7 @@
                     }).addTo(this.map);
 
                     this.routeGroup = L.layerGroup().addTo(this.map);
-                    this.circlesGroup = L.layerGroup().addTo(this.map); // ▼ novo
+                    this.circlesGroup = L.layerGroup().addTo(this.map);
 
                     this.$refs.mapContainer._leaflet_map = this.map;
 
@@ -96,12 +94,12 @@
                 },
 
                 renderizarMarcadores() {
-                    // limpa marcadores
+                    
                     if (this.markers?.length) this.markers.forEach(m => this.map.removeLayer(m));
                     this.markers = [];
 
-                    // limpa círculos
-                    this.circlesGroup?.clearLayers(); // ▼ novo
+                    
+                    this.circlesGroup?.clearLayers();
 
                     if (!this.pontos?.length) return;
 
@@ -120,16 +118,15 @@
                             icon
                         }).addTo(this.map);
                         marker.bindPopup(`
-          <div style="min-width:150px;">
-            <b>${p.rotulo ?? (isEscola ? 'Escola' : 'Ponto') + ' ' + (p.ordem ?? (i+1))}</b><br>
-            <small>Lat: ${Number(p.latitude).toFixed(6)}<br>Lng: ${Number(p.longitude).toFixed(6)}</small>
-          </div>
-        `);
+                        <div style="min-width:150px;">
+                            <b>${p.rotulo ?? (isEscola ? 'Escola' : 'Ponto') + ' ' + (p.ordem ?? (i+1))}</b><br>
+                            <small>Lat: ${Number(p.latitude).toFixed(6)}<br>Lng: ${Number(p.longitude).toFixed(6)}</small>
+                        </div>
+                        `);
 
                         this.markers.push(marker);
                         bounds.push(latlng);
 
-                        // ▼ círculo por ponto (usa p.raio se existir, senão padrão por tipo)
                         const raio = Number(p.raio ?? (isEscola ? this.raioEscola : this.raioPonto));
                         if (!Number.isNaN(raio) && raio > 0) {
                             L.circle(latlng, {
@@ -179,7 +176,6 @@
         };
 
 
-        // --- helper: mesmo do componente original ---
         function makeNumberedIcon(n, {
             fill = '#1E88E5',
             textColor = '#000'
@@ -201,14 +197,12 @@
             });
         }
 
-        // === Hook Livewire idêntico ao do original, mas para o visor ===
         document.addEventListener('livewire:load', () => {
             if (window.Livewire?.hook) {
                 Livewire.hook('message.processed', () => {
                     document.querySelectorAll('[data-rota-visor]').forEach(el => {
                         const ctrl = el._mapa_ctrl;
                         if (!ctrl?.map) return;
-                        // Re-render e resize após morph
                         ctrl.renderizarMarcadores();
                         if (ctrl.rotaAtiva) ctrl.calcularRota();
                         ctrl.map.invalidateSize(false);
@@ -219,7 +213,6 @@
     </script>
 
     <style>
-        /* Ativa 30%/70% somente quando a classe existir */
         @media (min-width: 1024px) {
             .lg\:grid-60-40 {
                 display: grid;

@@ -38,7 +38,8 @@ class Aluno extends Model
         'estado',
         'cep',
         'numero',
-        'complemento'
+        'complemento',
+        'tem_carteirinha',
     ];
 
 
@@ -65,7 +66,8 @@ class Aluno extends Model
                 'estado',
                 'cep',
                 'numero',
-                'complemento'
+                'complemento',
+                'tem_carteirinha',
             ]);
     }
 
@@ -77,5 +79,24 @@ class Aluno extends Model
     public function rota()
     {
         return $this->belongsTo(Rota::class, 'id_rota');
+    }
+
+    public function getEnderecoAttribute(): string
+    {
+        $partes = [];
+        if ($this->logradouro) $partes[] = $this->logradouro . ($this->numero ? ", {$this->numero}" : '');
+        if ($this->bairro)     $partes[] = $this->bairro;
+        $cidadeUf = trim(($this->cidade ?? '') . '/' . ($this->estado ?? ''), '/');
+        if ($cidadeUf !== '/') $partes[] = $cidadeUf;
+        return implode(' - ', $partes) ?: '-';
+    }
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        if (filled($this->foto)) {
+            $public = public_path('storage/' . ltrim($this->foto, '/'));
+            if (file_exists($public)) return $public;
+        }
+        return public_path('img/placeholder-foto.jpg');
     }
 }

@@ -31,6 +31,9 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="container">
+            <br>
+            <br>
+            <br>
             <div class="hero-content">
                 <div class="hero-text">
                     <h1>Transporte Escolar <span class="highlight">Municipal</span> de Umuarama</h1>
@@ -57,10 +60,6 @@
                             <span>📋</span>
                             Nossos Serviços
                         </a>
-                        <a href="#escolas" class="btn-secondary">
-                            <span>🏫</span>
-                            Escolas Atendidas
-                        </a>
                     </div>
                 </div>
                 <div class="hero-visual">
@@ -71,34 +70,6 @@
                             <div class="floating-element">🏫</div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Stats Section -->
-    <section class="stats">
-        <div class="container">
-            <div class="stats-grid">
-                <div class="stat-card fade-in">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-number">3.200+</div>
-                    <div class="stat-label">Estudantes Atendidos</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-icon">🚌</div>
-                    <div class="stat-number">58</div>
-                    <div class="stat-label">Veículos na Frota</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-icon">🏫</div>
-                    <div class="stat-number">42</div>
-                    <div class="stat-label">Instituições de Ensino</div>
-                </div>
-                <div class="stat-card fade-in">
-                    <div class="stat-icon">🛣️</div>
-                    <div class="stat-number">125</div>
-                    <div class="stat-label">Rotas Ativas</div>
                 </div>
             </div>
         </div>
@@ -157,67 +128,6 @@
                         <li>Atendimento personalizado</li>
                         <li>Parceria com famílias</li>
                     </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Schools Section -->
-    <section class="schools" id="escolas">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Instituições Atendidas</h2>
-                <p class="section-subtitle">Atendemos todas as principais escolas municipais, estaduais e instituições
-                    de ensino da região de Umuarama</p>
-            </div>
-
-            <div class="schools-grid">
-                <div class="school-card fade-in">
-                    <h3 class="school-name">EMEI Pequeno Mundo</h3>
-                    <p class="school-info">Educação Infantil - Zona Norte</p>
-                    <span class="school-students">142 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">Escola Municipal Prof. João Batista</h3>
-                    <p class="school-info">Ensino Fundamental - Centro</p>
-                    <span class="school-students">298 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">Colégio Estadual Humberto Alencar</h3>
-                    <p class="school-info">Ensino Médio - Zona Sul</p>
-                    <span class="school-students">387 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">EMEF Vila Operária</h3>
-                    <p class="school-info">Ensino Fundamental - Vila Operária</p>
-                    <span class="school-students">156 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">Escola Rural São José</h3>
-                    <p class="school-info">Multisseriada - Zona Rural</p>
-                    <span class="school-students">89 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">APAE Umuarama</h3>
-                    <p class="school-info">Educação Especial - Centro</p>
-                    <span class="school-students">73 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">Colégio Agrícola Estadual</h3>
-                    <p class="school-info">Ensino Técnico - Zona Rural</p>
-                    <span class="school-students">234 estudantes</span>
-                </div>
-
-                <div class="school-card fade-in">
-                    <h3 class="school-name">EMEI Jardim América</h3>
-                    <p class="school-info">Educação Infantil - Jardim América</p>
-                    <span class="school-students">118 estudantes</span>
                 </div>
             </div>
         </div>

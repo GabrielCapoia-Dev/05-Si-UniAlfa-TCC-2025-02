@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('cep')->max(8);
             $table->string('numero')->nullable();
             $table->string('complemento')->nullable();
+            $table->enum('tipo', ['Municipal', "Estadual"])->default('Municipal');
             $table->timestamps();
         });
     }

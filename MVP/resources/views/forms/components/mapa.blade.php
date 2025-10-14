@@ -88,12 +88,10 @@
           this.$refs.mapContainer._leaflet_map = this.map;
           this.$nextTick(() => setTimeout(() => this.map.invalidateSize(), 300));
 
-          // 🔹 grupo dedicado à rota
           this.routeGroup = L.layerGroup().addTo(this.map);
           this.rotaLayer = null;
 
           this.circlesGroup = L.layerGroup().addTo(this.map);
-          // 🔹 controle de concorrência de requisições
           this._routeReqId = 0;
           this._routeAbort = null;
 
@@ -103,7 +101,7 @@
               this.pontos = [{
                 latitude: e.latlng.lat,
                 longitude: e.latlng.lng,
-                ordem: 1
+                ordem: 1,
               }];
             } else {
               this.adicionarPonto(e.latlng.lat, e.latlng.lng);
@@ -117,7 +115,6 @@
           }, {
             deep: true
           });
-
           this.renderizarMarcadores();
           if (this.rotaAtiva) this.calcularRota();
         },
@@ -149,6 +146,9 @@
           if (!this.pontos || this.pontos.length === 0) return;
 
           this.pontos.forEach((ponto, i) => {
+            if (this.rotaAtiva === false) {
+              ponto.tipo = 'escola';
+            }
             const isEscola = (ponto.tipo === 'escola');
             const color = isEscola ? '#10b981' : '#1E88E5';
             const icon = makeNumberedIcon(ponto.ordem ?? (i + 1), {
@@ -156,11 +156,10 @@
             });
 
             const marker = L.marker([ponto.latitude, ponto.longitude], {
-              draggable: !isEscola, // 🔒 escola = fixo
+              draggable: !isEscola,
               icon,
             }).addTo(this.map);
 
-            // Só pontos manuais podem ser removidos/arrastados
             if (!isEscola) {
               marker.on('click', () => this.removerPonto(i));
               marker.on('dragend', (e) => {
@@ -178,7 +177,7 @@
 
             marker.bindPopup(`
               <div style="min-width:150px;">
-                <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
+              <b>${ponto.rotulo ? ponto.rotulo : `Ponto ${ponto.ordem ?? (i + 1)}`}</b><br>
                 <small>Lat: ${Number(ponto.latitude).toFixed(6)}<br>Lng: ${Number(ponto.longitude).toFixed(6)}</small>
               </div>
             `);
@@ -298,9 +297,7 @@
         <!-- gota do pin -->
         <path d="M16 0c-8.837 0-16 7.163-16 16 0 11.046 16 32 16 32s16-20.954 16-32C32 7.163 24.837 0 16 0z"
               fill="${fill}"/>
-        <!-- círculo branco interno -->
         <circle cx="16" cy="16" r="10" fill="#fff"/>
-        <!-- número -->
         <text x="16" y="20" text-anchor="middle"
               font-family="Inter, Arial, sans-serif"
               font-weight="700"

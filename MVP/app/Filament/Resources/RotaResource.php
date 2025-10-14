@@ -19,7 +19,11 @@ class RotaResource extends Resource
 {
     protected static ?string $model = Rota::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static ?string $navigationLabel = 'Rotas';
+    protected static ?string $pluralModelLabel = 'Rotas';
+    protected static ?string $modelLabel = 'Rota';
+    protected static ?string $navigationGroup = 'Gerenciamento Escolar';
 
     public static function form(Form $form): Form
     {

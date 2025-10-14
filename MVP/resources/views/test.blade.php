@@ -556,6 +556,7 @@
 
             routingControl.on('routesfound', function(e) {
                 const routes = e.routes;
+                console.log(routes);
                 const summary = routes[0].summary;
                 routeInfo.distance = (summary.totalDistance / 1000).toFixed(2);
                 routeInfo.time = Math.round(summary.totalTime / 60);

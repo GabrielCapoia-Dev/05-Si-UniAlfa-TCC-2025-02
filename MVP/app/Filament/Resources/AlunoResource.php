@@ -6,9 +6,11 @@ use App\Filament\Resources\AlunoResource\Pages;
 use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use App\Models\Aluno;
 use App\Models\Turma;
+use App\Models\Rota;
+use App\Services\AlunoService;
+use App\Services\UserService;
 use App\Models\Serie;
 use App\Models\Escola;
-use App\Models\Rota;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -42,7 +44,6 @@ class AlunoResource extends Resource
                             ->label('Nome:')
                             ->columnSpan(2)
                             ->required()
-                            ->unique(ignoreRecord: true)
                             ->maxLength(255),
 
                         Forms\Components\DatePicker::make('data_nascimento')
@@ -79,9 +80,7 @@ class AlunoResource extends Resource
                                     ->panelAspectRatio('1:1')
                                     ->columnSpan(3)
                                     ->getUploadedFileNameForStorageUsing(function ($file, $get) {
-                                        $cgm = $get('cgm') ?? 'sem-cgm';
-                                        $extension = strtolower($file->getClientOriginalExtension());
-                                        return "{$cgm}.{$extension}";
+                                        return app(AlunoService::class)->salvarFotoComNomeComoCGM($file, $get);
                                     }),
 
                                 Forms\Components\Fieldset::make('Rotas')
@@ -89,25 +88,30 @@ class AlunoResource extends Resource
                                         Forms\Components\Select::make('id_rota')
                                             ->label('Rota de transporte')
                                             ->options(function (Forms\Get $get) {
-                                                $turmaId = $get('id_turma');
-                                                if (!$turmaId) return [];
-
-                                                $escolaId = Turma::whereKey($turmaId)->value('id_escola');
-                                                if (!$escolaId) return [];
-
-                                                return Rota::query()
-                                                    ->whereHas('escolas', fn($q) => $q->where('escolas.id', $escolaId))
-                                                    ->orderBy('nome')
-                                                    ->pluck('nome', 'id');
+                                                return app(AlunoService::class)->opcoesDeRotasParaTurma($get('id_turma'));
                                             })
                                             ->disabled(fn(Forms\Get $get) => blank($get('id_turma')))
-                                            ->visible(fn() => Auth::user()?->is_admin ?? false)
+                                            ->visible(fn() => app(UserService::class)->ehAdmin())
                                             ->helperText('Lista apenas rotas vinculadas à escola da turma selecionada.')
                                             ->searchable()
-                                            ->preload()
-                                            ->required(),
+                                            ->columnSpanFull()
+                                            ->preload(),
+
+                                        Forms\Components\Toggle::make('tem_carteirinha')
+                                            ->label('Usa o Transporte?')
+                                            ->default(false)
+                                            ->columnSpanFull()
+                                            ->visible(function () {
+                                                $user = Auth::user();
+                                                return (app(AlunoService::class)->podeVerToggleCarteirinha($user));
+                                            })
+                                            ->inline(false)
+                                            ->onColor('success')
+                                            ->offColor('danger')
+                                            ->onIcon('heroicon-s-check')
+                                            ->offIcon('heroicon-s-x-mark'),
                                     ])
-                                    ->visible(fn() => Auth::user()?->is_admin ?? false),
+                                    ->visible(fn() => app(UserService::class)->ehAdmin()),
                             ])
                             ->columnSpan(3),
 
@@ -215,38 +219,39 @@ class AlunoResource extends Resource
                                             ]),
                                     ]),
 
-                                // ======= ESCOLA =======
                                 Forms\Components\Fieldset::make('Informações da Escola')
                                     ->schema([
                                         Forms\Components\Select::make('id_escola')
                                             ->label('Escola')
-                                            ->options(fn() => Escola::pluck('nome', 'id'))
+                                            ->options(fn() => app(AlunoService::class)->opcoesDeEscolasParaUsuario(Auth::user()))
                                             ->searchable()
                                             ->preload()
-                                            ->default(fn() => Auth::user()?->id_escola)
                                             ->required()
+                                            ->default(fn($record) => app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()))
+                                            ->afterStateHydrated(function ($state, callable $set, $record) {
+                                                $set('id_escola', app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()));
+                                            })
+                                            ->dehydrated(false)
+                                            ->disabled(fn() => app(AlunoService::class)->deveTravarCampoEscola(Auth::user()))
                                             ->reactive()
-                                            ->disabled(fn() => !(Auth::user()?->is_admin ?? false))
                                             ->afterStateUpdated(fn($state, callable $set) => $set('id_turma', null)),
 
                                         Forms\Components\Select::make('id_turma')
                                             ->label('Turma')
                                             ->options(function (Forms\Get $get, $record) {
-                                                $escolaId = $get('id_escola') ?? $record?->turma?->id_escola;
-                                                if (!$escolaId) return [];
-
-                                                return Turma::with('serie')->get()
-                                                    ->filter(fn($t) => $t->serie)
-                                                    ->mapWithKeys(fn($turma) => [
-                                                        $turma->id => "{$turma->serie->nome} - {$turma->turma}",
-                                                    ]);
+                                                $idEscola = $get('id_escola') ?? $record?->turma?->id_escola;
+                                                return app(AlunoService::class)->opcoesDeTurmasParaEscola($idEscola);
                                             })
                                             ->searchable()
                                             ->required()
-                                            ->disabled(fn(Forms\Get $get) => blank($get('id_escola')))
+                                            ->disabled(function (Forms\Get $get, $record) {
+                                                $idEscola = $get('id_escola') ?? $record?->turma?->id_escola;
+                                                return app(AlunoService::class)->desabilitarSelectTurma($idEscola);
+                                            })
                                             ->reactive()
                                             ->placeholder('Selecione a escola primeiro'),
                                     ]),
+
                             ])
                             ->columnSpan(9),
                     ]),
@@ -256,67 +261,8 @@ class AlunoResource extends Resource
     // ================== TABELA ==================
     public static function table(Table $table): Table
     {
-        return $table
-            ->paginated([10, 25, 50, 100])
-            ->columns([
-                Tables\Columns\TextColumn::make('nome')->label('Nome')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('turma.escola.nome')->label('Escola')->sortable()->formatStateUsing(
-                    fn($record) => optional($record->turma?->escola)->nome ?? '-'
-                ),
-                Tables\Columns\TextColumn::make('turma.turma')->label('Turma')->formatStateUsing(
-                    fn($record) => optional($record->turma?->serie)->nome 
-                        ? optional($record->turma?->serie)->nome . ' - ' . ($record->turma?->turma ?? '-') 
-                        : '-'
-                ),
-                Tables\Columns\TextColumn::make('cgm')->label('CGM')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('telefone_responsavel')->label('Telefone Resp.'),
-                Tables\Columns\TextColumn::make('telefone_aluno')->label('Telefone Aluno'),
-                Tables\Columns\TextColumn::make('cidade')->label('Cidade'),
-                Tables\Columns\TextColumn::make('estado')->label('UF'),
-            ])
-            ->filters([
-                SelectFilter::make('id_escola')->label('Escola')->relationship('turma.escola', 'nome')->searchable(),
-                SelectFilter::make('id_serie')
-                    ->label('Série')
-                    ->options(Serie::pluck('nome', 'id'))
-                    ->query(fn(Builder $query, array $data) =>
-                        !empty($data['value'])
-                            ? $query->whereHas('turma', fn($q) => $q->where('id_serie', $data['value']))
-                            : null
-                    ),
-                SelectFilter::make('id_turma')
-                    ->label('Turma')
-                    ->options(
-                        Turma::with('serie')->get()->filter(fn($t) => $t->serie)->mapWithKeys(fn($turma) => [
-                            $turma->id => "{$turma->serie->nome} - {$turma->turma}",
-                        ])
-                    )
-                    ->query(fn(Builder $query, array $data) =>
-                        !empty($data['value']) ? $query->where('id_turma', $data['value']) : null
-                    ),
-                Filter::make('ano_nascimento')
-                    ->form([
-                        Forms\Components\TextInput::make('ano')
-                            ->label('Ano de Nascimento')
-                            ->numeric()
-                            ->minValue(1900)
-                            ->maxValue(now()->year),
-                    ])
-                    ->query(fn(Builder $query, array $data) =>
-                        filled($data['ano'])
-                            ? $query->whereYear('data_nascimento', $data['ano'])
-                            : null
-                    ),
-                SelectFilter::make('bairro')
-                    ->label('Bairro')
-                    ->options(fn() => Aluno::select('bairro')->distinct()->pluck('bairro', 'bairro')->filter()),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->defaultSort('nome')
-            ->striped();
+        $user = Auth::user();
+        return app(AlunoService::class)->configurarTabela($table, $user);
     }
 
     public static function getRelations(): array
