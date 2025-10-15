@@ -45,7 +45,12 @@ class AlunoResource extends Resource
                             ->label('Nome:')
                             ->columnSpan(2)
                             ->required()
-                            ->maxLength(255),
+                            ->minLength(3)
+                            ->maxLength(255)
+                            ->rule('regex:/^[\p{L}]+$/u')
+                            ->validationMessages([
+                                'regex' => 'Use apenas letras, sem caracteres especiais.',
+                            ]),
 
                         Forms\Components\DatePicker::make('data_nascimento')
                             ->label('Data de Nascimento:')
