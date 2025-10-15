@@ -113,9 +113,15 @@ class EscolaResource extends Resource
                         Grid::make(12)
                             ->schema([
                                 Forms\Components\TextInput::make('nome')
-                                    ->label('Nome')
+                                    ->label('Nome:')
+                                    ->columnSpan(2)
                                     ->required()
+                                    ->minLength(3)
                                     ->maxLength(255)
+                                    ->rule('regex:/^[\p{L}]+$/u')
+                                    ->validationMessages([
+                                        'regex' => 'Use apenas letras, sem caracteres especiais.',
+                                    ])
                                     ->unique(ignoreRecord: true)
                                     ->columnSpan(7),
 
