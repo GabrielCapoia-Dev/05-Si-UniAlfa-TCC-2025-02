@@ -77,9 +77,9 @@ class DatabaseSeeder extends Seeder
         ];
 
         $usuarioPermissionsList = [
-            'Listar Séries',
             'Listar Turmas',
-
+            'Listar Alunos',
+            'Editar Alunos',
         ];
 
         // Criação das permissões
@@ -186,10 +186,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             EscolaSeeder::class,
+            SecretariosPorEscolaSeeder::class,
             TurmaSeeder::class,
             AlunoSeeder::class,
             RotasComPontosSeeder::class,
-            SecretariosPorEscolaSeeder::class
         ]);
     }
 }

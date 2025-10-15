@@ -3,95 +3,40 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Aluno;
+use App\Models\Escola;
 use App\Models\IgnoredUser;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Tables;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
-    /** Retorna se o usuário é Admin pelo Gate. */
+    /** 
+     * Metodos Publicos 
+     */
+
+    /** Verifica com base na regra no GATE se o usuario é admin */
     public function ehAdmin(?User $user = null): bool
     {
         return Gate::allows('admin-only', $user);
     }
 
-    /** Aplica filtro de listagem: não-admin não vê usuários com role Admin. */
+    /** Lista os usuários que não tem a role de Admin (whereDoesntHave retorna quem não tem a role) */
     public function listarUsuariosQuery(Builder $base, ?User $user): Builder
     {
         if (! $this->ehAdmin($user)) {
-            $base->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Admin'));
+            $base->whereDoesntHave('roles', fn($q) => $q->where('name', 'Admin'));
         }
         return $base;
     }
 
-    /** Retorna as opções de roles visíveis ao usuário (oculta 'Admin' para não-admin). */
-    public function opcoesDeRoles(Builder $base, ?User $user): Builder
-    {
-        return $this->ehAdmin($user) ? $base : $base->where('name', '!=', 'Admin');
-    }
-
-    /** Indica se o campo de role deve ficar desabilitado. */
-    public function desabilitarCampoRole(?User $user, ?User $record, string $context): bool
-    {
-        if ($context === 'create' || ! $record) return false;
-        if ($record->hasRole('Admin')) return true;
-        if ($user && $record->id === $user->id) return true;
-        return false;
-    }
-
-    /** Indica se o toggle de aprovação de e-mail deve ser visível. */
-    public function podeVerToggleAprovacaoEmail(?User $user, ?User $record, string $context): bool
-    {
-        if ($context === 'create') return true;
-        if (! $user || ! $this->ehAdmin($user)) return false;
-        if ($record && ($record->hasRole('Admin') || ($user && $record->id === $user->id))) return false;
-        return true;
-    }
-
-    /** Indica se o toggle de aprovação de e-mail deve estar desabilitado. */
-    public function desabilitarToggleAprovacaoEmail(?User $user, ?User $record): bool
-    {
-        return $user && $record && $user->id === $record->id;
-    }
-
-    /** Indica se a seção de vínculo com escola deve ser visível. */
-    public function podeVerSecaoEscola(?User $user, ?User $record, string $context): bool
-    {
-        if ($context === 'create') return true;
-        if (! $record) return false;
-        if ($record->hasRole('Admin')) return false;
-        if ($user && $record->id === $user->id) return false;
-        if ($context === 'edit') return true;
-        return false;
-    }
-
-    /** Indica se um registro pode ser selecionado na tabela. */
-    public function podeSelecionarRegistro(?User $user, User $record): bool
-    {
-        if (! $this->ehAdmin($user) && $record->hasRole('Admin')) return false;
-        return true;
-    }
-
-    /** Indica se pode deletar um usuário específico. */
-    public function podeDeletar(?User $user, User $record): bool
-    {
-        if (! $user) return false;
-        if ($record->id === 1) return false;
-        if ($record->id === $user->id) return false;
-        return $this->ehAdmin($user);
-    }
-
-    /** Indica se pode executar exclusão em lote. */
-    public function podeDeletarEmLote(?User $user, iterable $records): bool
-    {
-        if (! $this->ehAdmin($user)) return false;
-        foreach ($records as $u) {
-            if ($u instanceof User && $u->hasRole('Admin')) return false;
-        }
-        return true;
-    }
-
-    /** Retorna o badge de navegação de novos usuários. */
+    /** Retorna um icone com quantidade de novos usuários */
     public function badgeNavegacaoParaNovosUsuarios(?User $user): ?string
     {
         if (! $user || ! $this->ehAdmin($user)) return null;
@@ -102,7 +47,7 @@ class UserService
         return $count > 0 ? (string) $count : null;
     }
 
-    /** Sincroniza ignorados para pendentes (equivalente ao getTableQuery). */
+    /** Se existem usuários com email pendente, sincroniza para o admin */
     public function sincronizarIgnoradosParaAdmin(User $admin): void
     {
         if (! $this->ehAdmin($admin)) return;
@@ -114,5 +59,331 @@ class UserService
                 'user_id'  => $userId,
             ]);
         }
+    }
+
+
+    /**
+     *  Metodos Privados
+     */
+
+    /** Retorna as opções de roles para o select de roles no formulário */
+    private function opcoesDeRoles(Builder $base, ?User $user): Builder
+    {
+        return $this->ehAdmin($user) ? $base : $base->where('name', '!=', 'Admin');
+    }
+
+    /** Desabilita o campo de role se:
+     * O admin estiver editando a propria conta
+     * Se o usuário estiver editando a propria conta
+     * 
+     *  Não desabilita se:
+     * Estiver criando um novo usuário
+     */
+    private function desabilitarCampoRole(?User $user, ?User $record, string $context): bool
+    {
+        if ($context === 'create' || ! $record) return false;
+        if ($record->hasRole('Admin')) return true;
+        if ($user && $record->id === $user->id) return true;
+        return false;
+    }
+
+    /** Verifica se o admin pode ver o toggle de aprovação de email */
+    private function podeVerToggleAprovacaoEmail(?User $user, ?User $record, string $context): bool
+    {
+        if ($context === 'create') return true;
+        if (! $user || ! $this->ehAdmin($user)) return false;
+        if ($record && ($record->hasRole('Admin') || ($user && $record->id === $user->id))) return false;
+        return true;
+    }
+
+    /** Verifica se o usuario pode desabilitar o toggle de aprovação de email */
+    private function desabilitarToggleAprovacaoEmail(?User $user, ?User $record): bool
+    {
+        return $user && $record && $user->id === $record->id;
+    }
+
+    private function podeVerSecaoEscola(?User $user, ?User $record, string $context): bool
+    {
+        if ($context === 'create') return true;
+        if (! $record) return false;
+        if ($record->hasRole('Admin')) return false;
+        if ($user && $record->id === $user->id) return false;
+        if ($context === 'edit') return true;
+        return false;
+    }
+
+    private function podeSelecionarRegistro(?User $user, User $record): bool
+    {
+        if (! $this->ehAdmin($user) && $record->hasRole('Admin')) return false;
+        return true;
+    }
+
+    private function podeDeletar(?User $user, User $record): bool
+    {
+        if (! $user) return false;
+        if ($record->id === 1) return false;
+        if ($record->id === $user->id) return false;
+        return $this->ehAdmin($user);
+    }
+
+    private function podeDeletarEmLote(?User $user, iterable $records): bool
+    {
+        if (! $this->ehAdmin($user)) return false;
+        foreach ($records as $u) {
+            if ($u instanceof User && $u->hasRole('Admin')) return false;
+        }
+        return true;
+    }
+
+    /** ---------------- FORM: abstraído do Resource ---------------- */
+
+    public function configurarFormulario(Form $form): Form
+    {
+        return $form->schema($this->schemaFormulario());
+    }
+
+    protected function schemaFormulario(): array
+    {
+        return [
+            Forms\Components\TextInput::make('name')
+                ->label('Nome de usuário')
+                ->required(),
+
+            Forms\Components\TextInput::make('email')
+                ->label('E-mail')
+                ->unique(ignoreRecord: true)
+                ->email()
+                ->required(),
+
+            Forms\Components\TextInput::make('password')
+                ->label('Senha')
+                ->password()
+                ->revealable()
+                ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null)
+                ->dehydrated(fn($state) => filled($state))
+                ->required(fn(string $context): bool => $context === 'create'),
+
+            Forms\Components\Select::make('role')
+                ->label('Nivel de acesso')
+                ->relationship('roles', 'name', function (Builder $query) {
+                    return $this->opcoesDeRoles($query, Auth::user());
+                })
+                ->preload()
+                ->required()
+                ->disabled(
+                    fn(string $context, ?User $record) =>
+                    $this->desabilitarCampoRole(Auth::user(), $record, $context)
+                ),
+
+            Forms\Components\Toggle::make('email_approved')
+                ->label('Verificação de acesso')
+                ->inline(false)
+                ->onColor('success')
+                ->offColor('danger')
+                ->onIcon('heroicon-s-check')
+                ->offIcon('heroicon-s-x-mark')
+                ->default(true)
+                ->visible(
+                    fn(?User $record, string $context) =>
+                    $this->podeVerToggleAprovacaoEmail(Auth::user(), $record, $context)
+                ),
+
+            Forms\Components\Section::make('Vínculo com Escola')
+                ->icon('heroicon-o-identification')
+                ->description('Aqui mostra se o usuário esta vinculado a uma escola.')
+                ->schema([
+                    Forms\Components\Select::make('id_escola')
+                        ->label('Escola')
+                        ->options(fn() => $this->opcoesDeEscolasParaCampo(Auth::user()))
+                        ->searchable()
+                        ->preload()
+                        ->afterStateHydrated(function ($state, callable $set, ?User $record, string $operation) {
+                            $set('id_escola', $this->escolaInicialParaForm($record, Auth::user(), $operation));
+                        })
+                        ->default(fn(?User $record) => $this->escolaInicialParaForm($record, Auth::user(), 'create'))
+                        ->disabled(fn(string $operation) => $this->deveTravarCampoEscola(Auth::user(), $operation))
+                        ->dehydrated(true),
+                ])
+                ->visible(
+                    fn(?User $record, string $context) =>
+                    $this->podeVerSecaoEscola(Auth::user(), $record, $context)
+                ),
+        ];
+    }
+
+    /** Opções para o select de Escola conforme quem está acessando */
+    public function opcoesDeEscolasParaCampo(?User $currentUser): array
+    {
+        if ($this->ehAdmin($currentUser)) {
+            return Escola::query()->orderBy('nome')->pluck('nome', 'id')->toArray();
+        }
+
+        if (filled($currentUser?->id_escola)) {
+            return Escola::query()->whereKey($currentUser->id_escola)->pluck('nome', 'id')->toArray();
+        }
+
+        // Não-admin sem escola vinculada: nenhuma opção (campo ficará vazio)
+        return [];
+    }
+
+
+    /**
+     * Valor inicial do campo Escola:
+     * - Edit: usa a escola do registro se houver; senão cai pro vínculo do usuário atual (se houver)
+     * - Create: se o usuário atual tem escola, usa ela; caso contrário, null (admin escolhe)
+     */
+    public function escolaInicialParaForm(?User $record, ?User $currentUser, string $context): ?int
+    {
+        if ($record && filled($record->id_escola)) {
+            return (int) $record->id_escola;
+        }
+
+        if ($context === 'create') {
+            return $currentUser?->id_escola ?? null;
+        }
+
+        return $currentUser?->id_escola ?? null;
+    }
+
+    /**
+     * Deve travar o campo Escola?
+     * - Admin: nunca
+     * - Não-admin:
+     *    - create: se tem escola vinculada, TRAVA (para criar apenas na sua escola)
+     *    - edit: sempre TRAVA (não-admin não altera escola do usuário)
+     */
+    public function deveTravarCampoEscola(?User $currentUser, string $context): bool
+    {
+        if ($this->ehAdmin($currentUser)) {
+            return false;
+        }
+
+        if ($context === 'create' && filled($currentUser?->id_escola)) {
+            return true;
+        }
+
+        if ($context === 'edit') {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
+    public function configurarTabela(Table $table, ?User $user): Table
+    {
+        return $table
+            ->paginated([10, 25, 50, 100])
+            ->checkIfRecordIsSelectableUsing(fn(User $record) => $this->podeSelecionarRegistro($user, $record))
+            ->columns($this->colunasTabela())
+            ->actions($this->acoesTabela($user))
+            ->bulkActions($this->acoesEmMassa($user));
+    }
+
+    protected function colunasTabela(): array
+    {
+        return [
+            Tables\Columns\TextColumn::make('id_escola')
+                ->label('Escola')
+                ->searchable()
+                ->formatStateUsing(fn($state, User $record) => $record->escola?->nome ?? '-')
+                ->toggleable(isToggledHiddenByDefault: false),
+
+            Tables\Columns\TextColumn::make('name')
+                ->label('Nome de usuário')
+                ->searchable(),
+
+            Tables\Columns\TextColumn::make('email')
+                ->label('E-mail')
+                ->searchable(),
+
+            Tables\Columns\ToggleColumn::make('email_approved')
+                ->label('Verificação de Acesso')
+                ->sortable()
+                ->disabled(
+                    fn(User $record) =>
+                    $this->desabilitarToggleAprovacaoEmail(Auth::user(), $record)
+                )
+                ->visible(
+                    fn() =>
+                    $this->podeVerToggleAprovacaoEmail(Auth::user(), null, 'table')
+                )
+                ->inline(false)
+                ->onColor('success')
+                ->offColor('danger')
+                ->onIcon('heroicon-s-check')
+                ->offIcon('heroicon-s-x-mark')
+                ->columnSpan(1),
+
+            Tables\Columns\TextColumn::make('email_verified_at')
+                ->label('Verificado em')
+                ->since()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->formatStateUsing(function ($state, User $record) {
+                    if (! $record->email_approved) {
+                        return '--/--/-- --:--:--';
+                    }
+                    return $state ? $state->format('d/m/Y H:i:s') : '-';
+                }),
+
+            Tables\Columns\TextColumn::make('role')
+                ->label('Nivel de acesso')
+                ->sortable()
+                ->getStateUsing(fn(User $record) => $record->roles->first()?->name ?? '-')
+                ->toggleable(isToggledHiddenByDefault: false),
+
+            Tables\Columns\TextColumn::make('created_at')
+                ->label('Criado em')
+                ->since()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('updated_at')
+                ->label('Atualizado em')
+                ->since()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+    }
+
+    protected function acoesTabela(?User $user): array
+    {
+        return [
+            Tables\Actions\EditAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->before(function (User $record, Tables\Actions\DeleteAction $action) use ($user) {
+                    if (! $this->podeDeletar($user, $record)) {
+                        $action->failure();
+                        $action->halt();
+                    }
+                })
+                ->disabled(
+                    fn(User $record) => ($record->id === 1) || (Auth::id() === $record->id)
+                )
+                ->visible(
+                    fn() =>
+                    $this->ehAdmin(Auth::user())
+                ),
+        ];
+    }
+
+    protected function acoesEmMassa(?User $user): array
+    {
+        return [
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make()
+                    ->before(function ($records, $action) use ($user) {
+                        if (! $this->podeDeletarEmLote($user, $records)) {
+                            $action->halt();
+                        }
+                    })
+                    ->visible(
+                        fn() =>
+                        $this->ehAdmin(Auth::user())
+                    ),
+            ]),
+        ];
     }
 }

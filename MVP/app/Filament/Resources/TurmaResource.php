@@ -145,6 +145,12 @@ class TurmaResource extends Resource
                     ->label('Ver Alunos')
                     ->icon('heroicon-o-eye')
                     ->color('info')
+                    ->visible(function () {
+                        /** @var \App\Models\User */
+                        $user = Auth::user();
+
+                        return $user?->hasPermissionTo('Listar Alunos');
+                    })
                     ->url(fn($record) => route('filament.admin.resources.alunos.index', [
                         'tableFilters' => [
                             'id_turma' => [
