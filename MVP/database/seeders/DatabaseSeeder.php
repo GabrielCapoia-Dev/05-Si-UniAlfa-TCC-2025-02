@@ -77,9 +77,9 @@ class DatabaseSeeder extends Seeder
         ];
 
         $usuarioPermissionsList = [
-            'Listar Séries',
             'Listar Turmas',
-
+            'Listar Alunos',
+            'Editar Alunos',
         ];
 
         // Criação das permissões
