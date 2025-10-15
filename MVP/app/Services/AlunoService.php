@@ -266,6 +266,19 @@ class AlunoService
                     }
                 }),
 
+            SelectFilter::make('id_turma')
+                ->label('Turma')
+                ->options(
+                    Turma::with('serie')->get()->filter(fn($obj) => $obj->serie)
+                        ->mapWithKeys(fn($turma) => [
+                            $turma->id => "{$turma->serie->nome} - {$turma->turma}"
+                        ])
+                )
+                ->query(
+                    fn(Builder $query, array $data) =>
+                    !empty($data['value']) ? $query->where('id_turma', $data['value']) : null
+                ),
+
             SelectFilter::make('turma.turno')
                 ->label('Turno')
                 ->options([
