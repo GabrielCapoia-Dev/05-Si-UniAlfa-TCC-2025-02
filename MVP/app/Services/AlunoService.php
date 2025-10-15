@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Collection;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\User;
 
@@ -117,7 +118,7 @@ class AlunoService
     }
 
     /** Colunas da listagem de alunos. */
-    protected function colunasTabela(): array
+    private function colunasTabela(): array
     {
         return [
             Tables\Columns\ToggleColumn::make('tem_carteirinha')
@@ -142,28 +143,28 @@ class AlunoService
                 ->label('Escola')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
 
             Tables\Columns\TextColumn::make('turma.serie.nome')
                 ->label('Série')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
 
             Tables\Columns\TextColumn::make('turma.turma')
                 ->label('Turma')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
 
             Tables\Columns\TextColumn::make('nome_responsavel')
                 ->label('Nome Responsavel')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('telefone_responsavel')
                 ->label('Telefone Responsável')
@@ -174,7 +175,7 @@ class AlunoService
                     $telefone = $record->telefone_responsavel;
                     return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('telefone_aluno')
                 ->label('Telefone Aluno')
@@ -185,7 +186,7 @@ class AlunoService
                     $telefone = $record->telefone_aluno;
                     return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('telefone_alternativo')
                 ->label('Telefone')
@@ -196,55 +197,55 @@ class AlunoService
                     $telefone = $record->telefone_alternativo;
                     return $this->regexTelefone($telefone);
                 })
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('logradouro')
                 ->label('Logradouro')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('bairro')
                 ->label('Bairro')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('cidade')
                 ->label('Cidade')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('numero')
                 ->label('Número')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('estado')
                 ->label('Estado')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('cep')
                 ->label('CEP')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('complemento')
                 ->label('Complemento')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: false),
+                ->toggleable(isToggledHiddenByDefault: true),
 
         ];
     }
 
     /** Filtros da listagem de alunos. */
-    protected function filtrosTabela(?User $user): array
+    private function filtrosTabela(?User $user): array
     {
         return [
             SelectFilter::make('id_escola')
@@ -268,12 +269,9 @@ class AlunoService
 
             SelectFilter::make('id_turma')
                 ->label('Turma')
-                ->options(
-                    Turma::with('serie')->get()->filter(fn($obj) => $obj->serie)
-                        ->mapWithKeys(fn($turma) => [
-                            $turma->id => "{$turma->serie->nome} - {$turma->turma}"
-                        ])
-                )
+                ->searchable()
+                ->preload()
+                ->options($this->opcoesTurmaFiltro())
                 ->query(
                     fn(Builder $query, array $data) =>
                     !empty($data['value']) ? $query->where('id_turma', $data['value']) : null
@@ -305,8 +303,24 @@ class AlunoService
         ];
     }
 
+    private function opcoesTurmaFiltro(): array
+    {
+
+        $idEscola = Auth::user()?->id_escola;
+        if (!$idEscola) return [];
+
+        return Turma::with('serie')
+            ->where('id_escola', $idEscola)
+            ->get()
+            ->filter(fn($t) => $t->serie)
+            ->mapWithKeys(fn($t) => [
+                $t->id => "{$t->serie->nome} - {$t->turma}",
+            ])
+            ->toArray();
+    }
+
     /** Ações da tabela. */
-    protected function acoesTabela(): array
+    private function acoesTabela(): array
     {
         return [
             Tables\Actions\Action::make('visualizar')
@@ -355,7 +369,7 @@ class AlunoService
     }
 
     /** Ações em massa da tabela. */
-    protected function acoesEmMassa(?User $user): array
+    private function acoesEmMassa(?User $user): array
     {
         return [
             Tables\Actions\DeleteBulkAction::make(),
