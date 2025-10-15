@@ -50,7 +50,7 @@ class EscolaService
     }
 
     /** Colunas da listagem de escolas (espelha sua Resource). */
-    protected function colunasTabela(): array
+    private function colunasTabela(): array
     {
         return [
             Tables\Columns\TextColumn::make('tipo')
@@ -68,37 +68,43 @@ class EscolaService
                 ->wrap()
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('bairro')
                 ->label('Bairro')
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('cidade')
                 ->label('Cidade')
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('estado')
                 ->label('UF')
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('cep')
                 ->label('CEP')
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('numero')
                 ->label('Número')
                 ->toggleable()
                 ->sortable()
-                ->searchable(),
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('complemento')
                 ->label('Complemento')
@@ -109,18 +115,20 @@ class EscolaService
 
             Tables\Columns\TextColumn::make('created_at')
                 ->label('Criado em')
-                ->dateTime()
+                ->dateTime("d/m/Y H:i")
+                ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('updated_at')
                 ->label('Atualizado em')
-                ->dateTime()
+                ->dateTime("d/m/Y H:i")
+                ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 
     /** Filtros (com default municipal, como na sua Resource). */
-    protected function filtrosTabela(?User $user): array
+    private function filtrosTabela(?User $user): array
     {
         return [
             SelectFilter::make('tipo')
@@ -133,7 +141,7 @@ class EscolaService
     }
 
     /** Ações por linha (inclui o "Ver Turmas"). */
-    protected function acoesTabela(): array
+    private function acoesTabela(): array
     {
         return [
             Tables\Actions\Action::make('viewTurmas')
@@ -149,12 +157,12 @@ class EscolaService
                 ])),
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make()
-            ->action(fn($record) => $this->deletarEscola($record)),
+                ->action(fn($record) => $this->deletarEscola($record)),
         ];
     }
 
     /** Ações em massa (mantém Delete e um export em massa opcional). */
-    protected function acoesEmMassa(?User $user): array
+    private function acoesEmMassa(?User $user): array
     {
         return [
             FilamentExportBulkAction::make('exportar_filtrados')
@@ -164,40 +172,38 @@ class EscolaService
         ];
     }
 
-public function deletarEscola($record): bool
-{
-    $relacionamentos = [
-        'turmas',
-        'users',
-        'rotas',
-    ];
+    public function deletarEscola($record): bool
+    {
+        $relacionamentos = [
+            'turmas',
+            'users',
+            'rotas',
+        ];
 
-    foreach ($relacionamentos as $rel) {
-        if (method_exists($record, $rel) && $record->$rel()->exists()) {
+        foreach ($relacionamentos as $rel) {
+            if (method_exists($record, $rel) && $record->$rel()->exists()) {
 
-            if($rel == "users")
-            {
-                $rel = "usuários";
+                if ($rel == "users") {
+                    $rel = "usuários";
+                }
+
+                Notification::make()
+                    ->title('Operação cancelada')
+                    ->body("Não foi possível excluir esta escola pois esta vinculada a {$rel}.")
+                    ->danger()
+                    ->send();
+
+                return false;
             }
-
-            Notification::make()
-                ->title('Operação cancelada')
-                ->body("Não foi possível excluir esta escola pois esta vinculada a {$rel}.")
-                ->danger()
-                ->send();
-
-            return false;
         }
+
+        $record->delete();
+
+        Notification::make()
+            ->title('Escola excluída com sucesso')
+            ->success()
+            ->send();
+
+        return true;
     }
-
-    $record->delete();
-
-    Notification::make()
-        ->title('Escola excluída com sucesso')
-        ->success()
-        ->send();
-
-    return true;
-}
-
 }
