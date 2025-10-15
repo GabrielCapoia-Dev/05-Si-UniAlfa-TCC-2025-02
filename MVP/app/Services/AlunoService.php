@@ -159,6 +159,12 @@ class AlunoService
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
+            Tables\Columns\TextColumn::make('turma.turno')
+                ->label('Turno')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: true),
+
 
             Tables\Columns\TextColumn::make('nome_responsavel')
                 ->label('Nome Responsavel')
