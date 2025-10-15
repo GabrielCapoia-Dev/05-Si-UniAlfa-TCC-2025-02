@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Aluno;
+use App\Models\Escola;
 use App\Models\IgnoredUser;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -192,18 +194,15 @@ class UserService
                 ->schema([
                     Forms\Components\Select::make('id_escola')
                         ->label('Escola')
-                        ->options(fn() => app(EscolaService::class)->opcoesDeEscolasParaUsuario(Auth::user()))
+                        ->options(fn() => $this->opcoesDeEscolasParaCampo(Auth::user()))
                         ->searchable()
                         ->preload()
-                        ->required()
-                        ->default(fn($record) => app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()))
-                        ->afterStateHydrated(function ($state, callable $set, $record) {
-                            $set('id_escola', app(AlunoService::class)->escolaInicialParaForm($record, Auth::user()));
+                        ->afterStateHydrated(function ($state, callable $set, ?User $record, string $operation) {
+                            $set('id_escola', $this->escolaInicialParaForm($record, Auth::user(), $operation));
                         })
-                        ->dehydrated(false)
-                        ->disabled(fn() => app(AlunoService::class)->deveTravarCampoEscola(Auth::user()))
-                        ->reactive()
-                        ->afterStateUpdated(fn($state, callable $set) => $set('id_turma', null)),
+                        ->default(fn(?User $record) => $this->escolaInicialParaForm($record, Auth::user(), 'create'))
+                        ->disabled(fn(string $operation) => $this->deveTravarCampoEscola(Auth::user(), $operation))
+                        ->dehydrated(true),
                 ])
                 ->visible(
                     fn(?User $record, string $context) =>
@@ -212,8 +211,66 @@ class UserService
         ];
     }
 
-    /** ---------------- TABLE: abstraída do Resource ---------------- */
+    /** Opções para o select de Escola conforme quem está acessando */
+    public function opcoesDeEscolasParaCampo(?User $currentUser): array
+    {
+        if ($this->ehAdmin($currentUser)) {
+            return Escola::query()->orderBy('nome')->pluck('nome', 'id')->toArray();
+        }
 
+        if (filled($currentUser?->id_escola)) {
+            return Escola::query()->whereKey($currentUser->id_escola)->pluck('nome', 'id')->toArray();
+        }
+
+        // Não-admin sem escola vinculada: nenhuma opção (campo ficará vazio)
+        return [];
+    }
+
+
+    /**
+     * Valor inicial do campo Escola:
+     * - Edit: usa a escola do registro se houver; senão cai pro vínculo do usuário atual (se houver)
+     * - Create: se o usuário atual tem escola, usa ela; caso contrário, null (admin escolhe)
+     */
+    public function escolaInicialParaForm(?User $record, ?User $currentUser, string $context): ?int
+    {
+        if ($record && filled($record->id_escola)) {
+            return (int) $record->id_escola;
+        }
+
+        if ($context === 'create') {
+            return $currentUser?->id_escola ?? null;
+        }
+
+        return $currentUser?->id_escola ?? null;
+    }
+
+    /**
+     * Deve travar o campo Escola?
+     * - Admin: nunca
+     * - Não-admin:
+     *    - create: se tem escola vinculada, TRAVA (para criar apenas na sua escola)
+     *    - edit: sempre TRAVA (não-admin não altera escola do usuário)
+     */
+    public function deveTravarCampoEscola(?User $currentUser, string $context): bool
+    {
+        if ($this->ehAdmin($currentUser)) {
+            return false;
+        }
+
+        if ($context === 'create' && filled($currentUser?->id_escola)) {
+            return true;
+        }
+
+        if ($context === 'edit') {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
     public function configurarTabela(Table $table, ?User $user): Table
     {
         return $table
