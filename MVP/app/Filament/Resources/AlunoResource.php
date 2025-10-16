@@ -3,23 +3,15 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\AlunoResource\Pages;
-use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use App\Models\Aluno;
-use App\Models\Turma;
-use App\Models\Rota;
 use App\Services\AlunoService;
 use App\Services\UserService;
-use App\Models\Serie;
-use App\Models\Escola;
 use App\Services\EscolaService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\Filter;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -46,19 +38,29 @@ class AlunoResource extends Resource
                             ->columnSpan(2)
                             ->required()
                             ->minLength(3)
-                            ->maxLength(255)
-                            ->rule('regex:/^[\p{L}]+$/u')
+                            ->maxLength(100)
+                            ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
                             ->validationMessages([
                                 'regex' => 'Use apenas letras, sem caracteres especiais.',
                             ]),
 
+
                         Forms\Components\DatePicker::make('data_nascimento')
                             ->label('Data de Nascimento:')
-                            ->required(),
+                            ->required()
+                            ->maxDate(Carbon::today()->subYears(4))
+                            ->rule(fn() => 'before_or_equal:' . Carbon::today()->subYears(4)->toDateString())
+                            ->validationMessages([
+                                'before_or_equal' => 'A criança precisa ter pelo menos 4 anos.',
+                            ]),
 
                         Forms\Components\TextInput::make('cgm')
                             ->label('CGM:')
                             ->required()
+                            ->rules(['regex:/^\d{5}-\d{3}$/'])
+                            ->validationMessages([
+                                'regex' => 'Apenas numeros',
+                            ])
                             ->unique(ignoreRecord: true)
                             ->maxLength(20),
 
@@ -131,25 +133,42 @@ class AlunoResource extends Resource
                                         Forms\Components\TextInput::make('nome_responsavel')
                                             ->label('Nome do Responsável:')
                                             ->required()
-                                            ->maxLength(255),
+                                            ->maxLength(100)
+                                            ->minLength(3)
+                                            ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                            ->validationMessages([
+                                                'regex' => 'Use apenas letras, sem caracteres especiais.',
+                                            ]),
 
                                         Forms\Components\TextInput::make('telefone_responsavel')
                                             ->label('Telefone do Responsável:')
                                             ->required()
-                                            ->numeric()
-                                            ->maxLength(11),
+                                            ->mask('(99)99999-9999')
+                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->validationMessages([
+                                                'regex' => 'O telefone deve estar no formato (99)99999-9999',
+                                            ])
+                                            ->maxLength(14),
 
                                         Forms\Components\TextInput::make('telefone_aluno')
                                             ->label('Telefone do Aluno:')
                                             ->nullable()
-                                            ->numeric()
-                                            ->maxLength(11),
+                                            ->mask('(99)99999-9999')
+                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->validationMessages([
+                                                'regex' => 'O telefone deve estar no formato (99)99999-9999',
+                                            ])
+                                            ->maxLength(14),
 
                                         Forms\Components\TextInput::make('telefone_alternativo')
                                             ->label('Telefone Alternativo:')
                                             ->nullable()
-                                            ->numeric()
-                                            ->maxLength(11),
+                                            ->mask('(99)99999-9999')
+                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->validationMessages([
+                                                'regex' => 'O telefone deve estar no formato (99)99999-9999',
+                                            ])
+                                            ->maxLength(14),
                                     ]),
 
                                 // ======= ENDEREÇO =======
@@ -159,10 +178,15 @@ class AlunoResource extends Resource
                                             ->schema([
                                                 Forms\Components\TextInput::make('logradouro')
                                                     ->label('Logradouro')
-                                                    ->maxLength(255)
+                                                    ->maxLength(100)
                                                     ->columnSpan(5)
                                                     ->disabled(fn(Forms\Get $get) => blank($get('cep')))
-                                                    ->required(),
+                                                    ->required()
+                                                    ->minLength(3)
+                                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                                    ->validationMessages([
+                                                        'regex' => 'Use apenas letras e um espaço simples entre palavras.',
+                                                    ]),
 
                                                 Forms\Components\TextInput::make('numero')
                                                     ->label('Número')
@@ -203,25 +227,44 @@ class AlunoResource extends Resource
                                             ->schema([
                                                 Forms\Components\TextInput::make('bairro')
                                                     ->label('Bairro')
-                                                    ->maxLength(255)
+                                                    ->maxLength(100)
+                                                    ->minLength(3)
+                                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                                    ->validationMessages([
+                                                        'regex' => 'Use apenas letras e um espaço simples entre palavras.',
+                                                    ])
                                                     ->required(),
 
                                                 Forms\Components\TextInput::make('cidade')
                                                     ->label('Cidade')
-                                                    ->maxLength(255)
-                                                    ->required(),
+                                                    ->maxLength(100)
+                                                    ->required()
+                                                    ->minLength(3)
+                                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                                    ->validationMessages([
+                                                        'regex' => 'Use apenas letras e um espaço simples entre palavras.',
+                                                    ]),
 
                                                 Forms\Components\TextInput::make('estado')
                                                     ->label('UF')
                                                     ->maxLength(2)
                                                     ->placeholder('PR, SP, RJ...')
-                                                    ->required(),
+                                                    ->required()
+                                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                                    ->validationMessages([
+                                                        'regex' => 'Use apenas letras e um espaço simples entre palavras.',
+                                                    ]),
 
                                                 Forms\Components\TextInput::make('complemento')
                                                     ->label('Complemento')
                                                     ->maxLength(100)
                                                     ->nullable()
-                                                    ->placeholder('Ex.: Próximo ao Supermercado'),
+                                                    ->placeholder('Ex.: Próximo ao Supermercado')
+                                                    ->minLength(3)
+                                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                                    ->validationMessages([
+                                                        'regex' => 'Use apenas letras e um espaço simples entre palavras.',
+                                                    ]),
                                             ]),
                                     ]),
 

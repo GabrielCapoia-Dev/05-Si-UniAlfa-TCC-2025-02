@@ -61,7 +61,6 @@ class UserService
         }
     }
 
-
     /**
      *  Metodos Privados
      */
@@ -287,15 +286,20 @@ class UserService
             Tables\Columns\TextColumn::make('id_escola')
                 ->label('Escola')
                 ->searchable()
+                ->wrap()
+                ->sortable()
                 ->formatStateUsing(fn($state, User $record) => $record->escola?->nome ?? '-')
                 ->toggleable(isToggledHiddenByDefault: false),
 
             Tables\Columns\TextColumn::make('name')
                 ->label('Nome de usuário')
+                ->wrap()
+                ->sortable()
                 ->searchable(),
 
             Tables\Columns\TextColumn::make('email')
                 ->label('E-mail')
+                ->wrap()
                 ->searchable(),
 
             Tables\Columns\ToggleColumn::make('email_approved')
