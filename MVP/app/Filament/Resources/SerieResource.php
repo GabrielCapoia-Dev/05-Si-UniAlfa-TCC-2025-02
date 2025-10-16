@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\Rule;
 
 class SerieResource extends Resource
 {
@@ -33,7 +34,17 @@ class SerieResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('nome')
                     ->label('Nome da Série')
-                    ->required(),
+                    ->required()
+                    ->maxLength(255)
+                    ->rules([
+                        function ($record) {
+                            return Rule::unique('series', 'nome')
+                                ->ignore($record?->id); // ignora o ID ao editar
+                        },
+                    ])
+                    ->validationMessages([
+                        'unique' => 'Já existe uma série com este nome.',
+                    ]),
             ]);
     }
 
