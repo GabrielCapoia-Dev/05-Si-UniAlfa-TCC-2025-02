@@ -51,53 +51,13 @@ class RoleResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label('Nivel de acesso')
-                    ->required()
-                    ->disabled(fn($record, $context) => app(RoleService::class)->bloquearCampo($record, $context))
-                    ->unique(ignoreRecord: true),
-                Forms\Components\Select::make('permissions')
-                    ->label('Permissão de execução')
-                    ->multiple()
-                    ->relationship('permissions', 'name')
-                    ->preload()
-                    ->required()
-            ]);
+        return app(RoleService::class)->configurarFormulario($form);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->paginated([10, 25, 50, 100])
-            ->columns([
-                Tables\Columns\TextColumn::make('name')
-                    ->label('Nivel de acesso')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime('d/m/Y H:i:s')
-                    ->sortable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make()
-                    ->disabled(fn($record) => app(RoleService::class)->adminRole($record)),
-
-                Tables\Actions\DeleteAction::make()
-                    ->disabled(fn($record) => app(RoleService::class)->bloquearExclusao($record)),
-            ])
-            ->bulkActions([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->visible(function(){
-                            $user = Auth::user();
-                            return app(UserService::class)->ehAdmin($user);
-                        })
-            ])
-            ->checkIfRecordIsSelectableUsing(fn($record) => app(RoleService::class)->bloquearSelecaoBulkActions($record));
-        }
+        return app(RoleService::class)->configurarTabela($table, Auth::user());
+    }
 
     public static function getPages(): array
     {

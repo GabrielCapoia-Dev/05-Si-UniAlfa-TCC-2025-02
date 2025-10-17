@@ -166,8 +166,18 @@ class UserService
             Forms\Components\TextInput::make('email')
                 ->label('E-mail')
                 ->unique(ignoreRecord: true)
-                ->email()
-                ->required(),
+                ->required()
+                ->rules([
+                    'max:255',
+                    'email:rfc,dns',
+                    'regex:/^(?!.*\.\.)[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i',
+                ])
+                ->afterStateUpdated(fn($state, $set) => $set('email', strtolower(trim((string) $state))))
+                ->validationMessages([
+                    'email' => 'Informe um e-mail válido.',
+                    'regex' => 'E-mail inválido (sem espaços e sem pontos duplicados).',
+                    'max'   => 'Use no máximo 255 caracteres.',
+                ]),
 
             Forms\Components\TextInput::make('password')
                 ->label('Senha')
@@ -177,12 +187,12 @@ class UserService
                 ->minLength(8)
                 ->maxLength(30)
                 ->rules([
-                    'nullable',                 // permite ficar vazio no edit
-                    'max:30',                   // teto
-                    PasswordRule::min(8)        // piso + complexidade
-                        ->mixedCase()           // maiúsculas e minúsculas
-                        ->numbers()             // números
-                        ->symbols(),            // especiais
+                    'nullable',
+                    'max:30',
+                    PasswordRule::min(8)
+                        ->mixedCase()
+                        ->numbers()
+                        ->symbols(),
                 ])
                 ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null)
                 ->dehydrated(fn($state) => filled($state))
