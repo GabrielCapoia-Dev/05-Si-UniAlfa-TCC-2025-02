@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Hash;
 
 class UserService
@@ -154,7 +155,6 @@ class UserService
         return [
             Forms\Components\TextInput::make('name')
                 ->label('Nome:')
-                ->columnSpan(2)
                 ->required()
                 ->minLength(3)
                 ->maxLength(100)
@@ -173,9 +173,24 @@ class UserService
                 ->label('Senha')
                 ->password()
                 ->revealable()
+                ->helperText('Mín. 8 e máx. 30 caracteres. Deve conter letras maiúsculas, minúsculas, números e caracteres especiais.')
+                ->minLength(8)
+                ->maxLength(30)
+                ->rules([
+                    'nullable',                 // permite ficar vazio no edit
+                    'max:30',                   // teto
+                    PasswordRule::min(8)        // piso + complexidade
+                        ->mixedCase()           // maiúsculas e minúsculas
+                        ->numbers()             // números
+                        ->symbols(),            // especiais
+                ])
                 ->dehydrateStateUsing(fn($state) => filled($state) ? Hash::make($state) : null)
                 ->dehydrated(fn($state) => filled($state))
-                ->required(fn(string $context): bool => $context === 'create'),
+                ->required(fn(string $context): bool => $context === 'create')
+                ->validationMessages([
+                    'max' => 'A senha deve ter no máximo 30 caracteres.',
+                ]),
+
 
             Forms\Components\Select::make('role')
                 ->label('Nivel de acesso')
@@ -390,13 +405,13 @@ class UserService
     protected function acoesEmMassa(?User $user): array
     {
         return [
-                Tables\Actions\DeleteBulkAction::make()
-                    ->before(function ($records, $action) use ($user) {
-                        if (! $this->podeDeletarEmLote($user, $records)) {
-                            $action->halt();
-                        }
-                    })
-                    ->visible(fn() =>$this->ehAdmin(Auth::user())),
+            Tables\Actions\DeleteBulkAction::make()
+                ->before(function ($records, $action) use ($user) {
+                    if (! $this->podeDeletarEmLote($user, $records)) {
+                        $action->halt();
+                    }
+                })
+                ->visible(fn() => $this->ehAdmin(Auth::user())),
         ];
     }
 }

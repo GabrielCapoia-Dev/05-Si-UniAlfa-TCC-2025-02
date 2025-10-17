@@ -34,7 +34,7 @@ class SecretariosPorEscolaSeeder extends Seeder
                     [
                         'id_escola'         => $escola->id,
                         'name'              => "Secretário {$escola->nome}",
-                        'password'          => Hash::make('123456'),
+                        'password'          => Hash::make('Senha@123'),
                         'email_approved'    => true,
                         'email_verified_at' => now(),
                     ]

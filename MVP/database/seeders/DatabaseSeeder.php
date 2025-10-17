@@ -82,6 +82,8 @@ class DatabaseSeeder extends Seeder
             'Editar Alunos',
         ];
 
+        $password = "Senha@123";
+
         // Criação das permissões
         foreach ($permissionsList as $permissionName) {
             Permission::firstOrCreate(['name' => $permissionName]);
@@ -101,7 +103,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@admin.com'],
             [
                 'name' => 'Admin',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'email_approved' => true
             ]
@@ -111,7 +113,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'secretario@secretario.com'],
             [
                 'name' => 'Secretario',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'email_approved' => true
             ]
@@ -121,7 +123,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'usuario@usuario.com'],
             [
                 'name' => 'Usuario',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'email_approved' => true
             ]
