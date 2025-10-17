@@ -8,6 +8,8 @@ use App\Models\Role;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use App\Services\RoleService;
+use App\Services\UserService;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,6 +56,7 @@ class RoleResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->label('Nivel de acesso')
                     ->required()
+                    ->disabled(fn($record, $context) => app(RoleService::class)->bloquearCampo($record, $context))
                     ->unique(ignoreRecord: true),
                 Forms\Components\Select::make('permissions')
                     ->label('Permissão de execução')
@@ -80,24 +83,21 @@ class RoleResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->disabled(fn($record) => app(RoleService::class)->adminRole($record)),
+
+                Tables\Actions\DeleteAction::make()
+                    ->disabled(fn($record) => app(RoleService::class)->bloquearExclusao($record)),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->visible(function () {
-                            /** @var \App\Models\User|null $user */
+                        ->visible(function(){
                             $user = Auth::user();
-                            if (!$user) {
-                                return false;
-                            }
-
-                            return $user->hasRole('Admin');
-                        }),
-                ])
-            ]);
-    }
+                            return app(UserService::class)->ehAdmin($user);
+                        })
+            ])
+            ->checkIfRecordIsSelectableUsing(fn($record) => app(RoleService::class)->bloquearSelecaoBulkActions($record));
+        }
 
     public static function getPages(): array
     {

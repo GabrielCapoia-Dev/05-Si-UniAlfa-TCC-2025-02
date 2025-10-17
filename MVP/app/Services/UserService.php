@@ -221,7 +221,6 @@ class UserService
             return Escola::query()->whereKey($currentUser->id_escola)->pluck('nome', 'id')->toArray();
         }
 
-        // Não-admin sem escola vinculada: nenhuma opção (campo ficará vazio)
         return [];
     }
 
@@ -376,18 +375,13 @@ class UserService
     protected function acoesEmMassa(?User $user): array
     {
         return [
-            Tables\Actions\BulkActionGroup::make([
                 Tables\Actions\DeleteBulkAction::make()
                     ->before(function ($records, $action) use ($user) {
                         if (! $this->podeDeletarEmLote($user, $records)) {
                             $action->halt();
                         }
                     })
-                    ->visible(
-                        fn() =>
-                        $this->ehAdmin(Auth::user())
-                    ),
-            ]),
+                    ->visible(fn() =>$this->ehAdmin(Auth::user())),
         ];
     }
 }
