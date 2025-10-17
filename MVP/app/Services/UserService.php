@@ -113,9 +113,17 @@ class UserService
 
     private function podeSelecionarRegistro(?User $user, User $record): bool
     {
-        if (! $this->ehAdmin($user) && $record->hasRole('Admin')) return false;
+        if ($record->hasRole('Admin')) {
+            return false;
+        }
+
+        if (! $this->ehAdmin($user) && $record->hasRole('Admin')) {
+            return false;
+        }
+
         return true;
     }
+
 
     private function podeDeletar(?User $user, User $record): bool
     {
@@ -127,9 +135,9 @@ class UserService
 
     private function podeDeletarEmLote(?User $user, iterable $records): bool
     {
-        if (! $this->ehAdmin($user)) return false;
-        foreach ($records as $u) {
-            if ($u instanceof User && $u->hasRole('Admin')) return false;
+        if (!$this->ehAdmin($user)) return false;
+        foreach ($records as $record) {
+            if ($record instanceof User && $record->hasRole('Admin')) return false;
         }
         return true;
     }
