@@ -77,7 +77,7 @@ class TurmaResource extends Resource
                     ->options([
                         'Manhã' => 'Manhã',
                         'Tarde' => 'Tarde',
-                        'Naoite' => 'Noite',
+                        'Noite' => 'Noite',
                         'Integral' => 'Integral',
                     ])
                     ->required(),
