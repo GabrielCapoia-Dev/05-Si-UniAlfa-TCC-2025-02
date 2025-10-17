@@ -33,15 +33,18 @@ class SerieResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('nome')
-                    ->label('Nome:')
+                    ->label('Nome da Série')
                     ->required()
-                    ->minLength(3)
-                    ->maxLength(100)
-                    ->rule('regex:/^(?!.*\s{2,})(?=.*\p{L})[0-9\p{L}\sºª-]+$/u')
-                    ->validationMessages([
-                        'regex' => 'Use apenas letras, sem caracteres especiais.',
-                        'unique' => 'Já existe uma série com este nome.',
+                    ->maxLength(255)
+                    ->rules([
+                        function ($record) {
+                            return Rule::unique('series', 'nome')
+                                ->ignore($record?->id); // ignora o ID ao editar
+                        },
                     ])
+                    ->validationMessages([
+                        'unique' => 'Já existe uma série com este nome.',
+                    ]),
             ]);
     }
 
@@ -63,7 +66,9 @@ class SerieResource extends Resource
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

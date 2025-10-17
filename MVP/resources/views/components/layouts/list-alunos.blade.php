@@ -36,6 +36,9 @@
                         <div class="mt-2 inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                             CGM: {{ $alunoSelecionado->cgm ?? 'N/A' }}
                         </div>
+                        <div class="mt-2 inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                            TURNO: {{ $alunoSelecionado->turma->turno ?? 'N/A' }}
+                        </div>
                     </div>
 
                     {{-- Escola / Turma --}}
@@ -106,6 +109,9 @@
                     </p>
                     <div class="mt-2 inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
                         CGM: {{ $alunoSelecionado->cgm ?? 'N/A' }}
+                    </div>
+                    <div class="mt-2 inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                        TURNO: {{ $alunoSelecionado->turma->turno ?? 'N/A' }}
                     </div>
                 </div>
 
