@@ -153,8 +153,15 @@ class UserService
     {
         return [
             Forms\Components\TextInput::make('name')
-                ->label('Nome de usuário')
-                ->required(),
+                ->label('Nome:')
+                ->columnSpan(2)
+                ->required()
+                ->minLength(3)
+                ->maxLength(100)
+                ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                ->validationMessages([
+                    'regex' => 'Use apenas letras, sem caracteres especiais.',
+                ]),
 
             Forms\Components\TextInput::make('email')
                 ->label('E-mail')
