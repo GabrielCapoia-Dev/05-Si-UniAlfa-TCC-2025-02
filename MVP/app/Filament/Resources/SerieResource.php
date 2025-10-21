@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Validation\Rule;
+use App\Services\SerieService;
 
 class SerieResource extends Resource
 {
@@ -39,7 +40,7 @@ class SerieResource extends Resource
                     ->rules([
                         function ($record) {
                             return Rule::unique('series', 'nome')
-                                ->ignore($record?->id); // ignora o ID ao editar
+                                ->ignore($record?->id);
                         },
                     ])
                     ->validationMessages([
@@ -63,7 +64,9 @@ class SerieResource extends Resource
 
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->action(fn($record) => app(SerieService::class)->deletarSerie($record->id)),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
