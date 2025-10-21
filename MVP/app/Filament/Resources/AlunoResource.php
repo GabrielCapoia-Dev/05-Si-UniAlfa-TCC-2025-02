@@ -57,9 +57,11 @@ class AlunoResource extends Resource
                         Forms\Components\TextInput::make('cgm')
                             ->label('CGM:')
                             ->required()
-                            ->rules(['regex:/^\d{5}-\d{3}$/'])
+                            ->minLength(6)
+                            ->rules(['regex:/^\d+$/'])
                             ->validationMessages([
                                 'regex' => 'Apenas numeros',
+                                'min' => 'O CGM deve ter no mínimo 6 dígitos.',
                             ])
                             ->unique(ignoreRecord: true)
                             ->maxLength(20),
@@ -144,7 +146,7 @@ class AlunoResource extends Resource
                                             ->label('Telefone do Responsável:')
                                             ->required()
                                             ->mask('(99)99999-9999')
-                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->rules(['regex:/^\(\d{2}\)\d{5}-\d{4}$/'])
                                             ->validationMessages([
                                                 'regex' => 'O telefone deve estar no formato (99)99999-9999',
                                             ])
@@ -154,7 +156,7 @@ class AlunoResource extends Resource
                                             ->label('Telefone do Aluno:')
                                             ->nullable()
                                             ->mask('(99)99999-9999')
-                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->rules(['regex:/^\(\d{2}\)\d{5}-\d{4}$/'])
                                             ->validationMessages([
                                                 'regex' => 'O telefone deve estar no formato (99)99999-9999',
                                             ])
@@ -164,7 +166,7 @@ class AlunoResource extends Resource
                                             ->label('Telefone Alternativo:')
                                             ->nullable()
                                             ->mask('(99)99999-9999')
-                                            ->rules(['regex:/^\d{10}-\d{4}$/'])
+                                            ->rules(['regex:/^\(\d{2}\)\d{5}-\d{4}$/'])
                                             ->validationMessages([
                                                 'regex' => 'O telefone deve estar no formato (99)99999-9999',
                                             ])
@@ -228,7 +230,7 @@ class AlunoResource extends Resource
                                                 Forms\Components\TextInput::make('bairro')
                                                     ->label('Bairro')
                                                     ->maxLength(100)
-                                                    ->minLength(3)
+                                                    ->minLength(2)
                                                     ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
                                                     ->validationMessages([
                                                         'regex' => 'Use apenas letras e um espaço simples entre palavras.',

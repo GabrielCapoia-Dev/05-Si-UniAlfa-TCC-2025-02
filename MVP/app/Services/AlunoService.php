@@ -19,6 +19,7 @@ use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Collection;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use Filament\Actions;
 
 use App\Models\User;
 
@@ -103,6 +104,58 @@ class AlunoService
             ->orderBy('nome')
             ->pluck('nome', 'id')
             ->toArray();
+    }
+
+    /** Busca alunos para listagem. */
+    public function buscarAlunosParaListagem(?User $user): Builder
+    {
+        $query = app(ListAlunos::class)->getResource()::getEloquentQuery()
+            ->with(['turma.escola', 'turma.serie']); 
+
+        if ($user && (!$user->hasRole('Admin')) && !empty($user->id_escola)) {
+            $query->whereHas('turma', function (Builder $t) use ($user) {
+                $t->where($t->getModel()->getTable() . '.id_escola', $user->id_escola);
+            });
+        }
+
+        return $query;
+    }
+
+    /** Ações do cabeçario da tabela. */
+    public function validarAcoesCabecario(): array
+    {
+        $hasEscolas = Escola::exists();
+        $hasTurmas = Turma::exists();
+
+        if ($hasEscolas && $hasTurmas) {
+            return [
+                Actions\CreateAction::make(),
+            ];
+        }
+
+        $actions = [];
+
+        if (! $hasEscolas) {
+            $actions[] = Actions\Action::make('Cadastrar Escolas')
+                ->button()
+                ->color('danger')
+                ->icon('heroicon-o-building-library')
+                ->url(route('filament.admin.resources.escolas.index'));
+
+            return $actions;
+        }
+
+        if ( $hasEscolas && !$hasTurmas) {
+            $actions[] = Actions\Action::make('Cadastrar Turmas')
+                ->button()
+                ->color('danger')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->url(route('filament.admin.resources.turmas.index'));
+
+            return $actions;
+        }
+
+        return $actions;
     }
 
     /** Mostra seção/field de Rotas apenas para Admin. */
@@ -309,6 +362,7 @@ class AlunoService
         ];
     }
 
+    /** Opções de turma para filtro. */
     private function opcoesTurmaFiltro(): array
     {
 
