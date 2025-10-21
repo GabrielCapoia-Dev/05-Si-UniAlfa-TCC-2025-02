@@ -56,9 +56,15 @@ class DominioEmailResource extends Resource
                     ->helperText('Digite o dominio sem o @, exemplo: dominio.com.br')
                     ->placeholder('dominio.com.br'),
 
-                TextInput::make('setor')
-                    ->label('Setor')
-                    ->required(),
+                TextInput::make('nome')
+                    ->label('Nome:')
+                    ->required()
+                    ->minLength(3)
+                    ->maxLength(100)
+                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                    ->validationMessages([
+                        'regex' => 'Use apenas letras, sem caracteres especiais.',
+                    ]),
 
                 Toggle::make('status')
                     ->label('Status')

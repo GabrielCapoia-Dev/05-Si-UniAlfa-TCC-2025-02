@@ -11,7 +11,7 @@ class ValidaUser
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user(); // Para verificar se o usuario ta autenticado 
+        $user = Auth::user();
 
         if (! $user || ! $user instanceof \App\Models\User) {
             return redirect()->route('filament.admin.auth.login');

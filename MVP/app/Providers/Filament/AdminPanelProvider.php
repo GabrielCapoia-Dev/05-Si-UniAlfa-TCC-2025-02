@@ -24,6 +24,7 @@ use Filament\Http\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\LoginPage;
 use App\Http\Middleware\ValidaUser;
+use App\Services\UserService;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -44,7 +45,6 @@ class AdminPanelProvider extends PanelProvider
             ->login(LoginPage::class)
             ->colors([
                 'primary' => Color::Green,
-                // 'gray' => Color::Slate,
                 'gray' => [
                     50 => '#e9f0f0ff',
                     100 => '#c7f8e9c7',
@@ -63,9 +63,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
+            ->pages([])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([])
             ->middleware([
@@ -91,15 +89,7 @@ class AdminPanelProvider extends PanelProvider
                     ->pluralLabel('Registro de Atividades')
                     ->navigationGroup('Administrativo')
                     ->navigationSort(1)
-                    ->authorize(function () {
-                        /** @var \App\Models\User|null $user */
-                        $user = Auth::user();
-                        if (!$user) {
-                            return false;
-                        }
-
-                        return $user->hasRole('Admin');
-                    }),
+                    ->authorize(fn() => app(UserService::class)->ehAdmin(Auth::user())),
             ]);
     }
 }
