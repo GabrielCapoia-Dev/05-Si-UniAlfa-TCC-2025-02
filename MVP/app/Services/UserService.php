@@ -306,7 +306,10 @@ class UserService
             ->checkIfRecordIsSelectableUsing(fn(User $record) => $this->podeSelecionarRegistro($user, $record))
             ->columns($this->colunasTabela())
             ->actions($this->acoesTabela($user))
-            ->bulkActions($this->acoesEmMassa($user));
+            ->bulkActions($this->acoesEmMassa($user))
+            ->defaultSort('updated_at', 'desc')
+            ->striped();
+
     }
 
     protected function colunasTabela(): array

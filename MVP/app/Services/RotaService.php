@@ -26,7 +26,10 @@ class RotaService
             ->columns($this->colunasTabela())
             ->filters($this->filtrosTabela($user))
             ->actions($this->acoesTabela($user))
-            ->bulkActions($this->acoesEmMassa($user));
+            ->bulkActions($this->acoesEmMassa($user))
+            ->defaultSort('updated_at', 'desc')
+            ->striped();
+
     }
 
     //** Modifica a query da tabela para retornar os contadores dos dados */

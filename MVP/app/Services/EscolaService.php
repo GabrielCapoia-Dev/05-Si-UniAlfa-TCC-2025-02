@@ -45,7 +45,7 @@ class EscolaService
             ->filters($this->filtrosTabela($user))
             ->actions($this->acoesTabela())
             ->bulkActions($this->acoesEmMassa($user))
-            ->defaultSort('nome')
+            ->defaultSort('updated_at', 'desc')
             ->striped();
     }
 

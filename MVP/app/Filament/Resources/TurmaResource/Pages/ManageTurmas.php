@@ -9,6 +9,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use App\Services\TurmaService;
 
 class ManageTurmas extends ManageRecords
 {
@@ -16,61 +17,16 @@ class ManageTurmas extends ManageRecords
 
     protected function getHeaderActions(): array
     {
-        $hasEscolas = Escola::exists();
-        $hasSeries = Serie::exists();
-
-        if ($hasEscolas && $hasSeries) {
-            return [
-                Actions\CreateAction::make(),
-            ];
-        }
-
-        $actions = [];
-
-        if (! $hasEscolas) {
-            $actions[] = Actions\Action::make('Cadastrar Escolas')
-                ->button()
-                ->color('danger')
-                ->icon('heroicon-o-academic-cap')
-                ->url(route('filament.admin.resources.escolas.index'));
-        }
-
-        if (! $hasSeries) {
-            $actions[] = Actions\Action::make('Cadastrar Séries')
-                ->button()
-                ->color('danger')
-                ->icon('heroicon-o-collection')
-                ->url(route('filament.admin.resources.series.index'));
-        }
-
-        return $actions;
+        return app(TurmaService::class)->acoesDoCabecalhoDaPagina();
     }
 
     protected function getTableQuery(): Builder
     {
-        $query = static::getResource()::getEloquentQuery()
-            ->with(['escola', 'serie']); // ajuste os withs que quiser
-
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if ($user && (!$user->hasRole('Admin')) && !empty($user->id_escola)) {
-            $query->where($query->getModel()->getTable() . '.id_escola', $user->id_escola);
-        }
-
-        return $query;
+        return app(TurmaService::class)->queryTabela();
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        /** @var \App\Models\User|null $auth */
-        $auth = Auth::user();
-
-        // Se não for Admin e tiver escola, força o vínculo da turma à escola do criador.
-        if ($auth && !$auth->hasRole('Admin') && !empty($auth->id_escola)) {
-            $data['id_escola'] = $auth->id_escola;
-        }
-
-        return $data;
+        return app(TurmaService::class)->forcarVinculoComEscola($data);
     }
 }
