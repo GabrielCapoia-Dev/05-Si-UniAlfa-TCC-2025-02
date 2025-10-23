@@ -37,11 +37,11 @@ class EditRota extends EditRecord
             ->get();
 
         $data['pontos'] = $rows->map(fn($p) => [
-            'id'        => (int) $p->id,            // 👈 incluímos o ID!
+            'id'        => (int) $p->id,         
             'ordem'     => (int) $p->ordem,
             'latitude'  => (float) $p->latitude,
             'longitude' => (float) $p->longitude,
-            'tipo'      => $p->tipo,                // 'ponto' | 'escola'
+            'tipo'      => $p->tipo,         
             'id_escola' => $p->id_escola,
             'rotulo'    => $p->tipo === 'escola' ? ('Escola ' . optional($p->escola)->nome) : null,
             'raio'      => null,
@@ -54,14 +54,12 @@ class EditRota extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // pegue o estado atual do form para os arrays que não são fillables do model
         $this->pontosTmp  = $this->form->getRawState()['pontos']    ?? [];
         $this->escolasTmp = $this->form->getRawState()['escola_id'] ?? [];
 
-        // remova para não tentar salvar em 'rotas'
         unset($data['pontos'], $data['escola_id']);
 
-        return $data; // aqui ficam só 'nome', 'turno', etc.
+        return $data;
     }
 
     protected function afterSave(): void

@@ -37,7 +37,6 @@ class CreateRota extends CreateRecord
             ]);
         }
 
-        // Guarda para o afterCreate()
         $this->pontosTmp  = $pontos;
         $this->escolasTmp = $escolas;
 
@@ -49,12 +48,10 @@ class CreateRota extends CreateRecord
     protected function afterCreate(): void
     {
         DB::transaction(function () {
-            // Pivot escolas
             if (!empty($this->escolasTmp)) {
                 $this->record->escolas()->sync($this->escolasTmp);
             }
 
-            // Pontos
             $payload = [];
             foreach ($this->pontosTmp as $i => $p) {
                 $lat = $p['latitude']  ?? null;
@@ -67,15 +64,13 @@ class CreateRota extends CreateRecord
                 $payload[] = [
                     'latitude'   => (float) $lat,
                     'longitude'  => (float) $lng,
-                    'ordem'      => (int) ($p['ordem'] ?? ($i + 1)), // fallback seguro
+                    'ordem'      => (int) ($p['ordem'] ?? ($i + 1)), 
                     'tipo'       => $tipo,
                     'id_escola'  => $idEscola,
                 ];
             }
 
             if ($payload) {
-                // Se editar no futuro, pode limpar antes:
-                // $this->record->pontosDeParada()->delete();
                 $this->record->pontosDeParada()->createMany($payload);
             }
         });

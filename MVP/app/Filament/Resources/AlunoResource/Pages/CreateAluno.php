@@ -22,7 +22,6 @@ class CreateAluno extends CreateRecord
         /** @var \App\Models\User|null $auth */
         $auth = Auth::user();
 
-        // Para não-admin, garanta que a turma selecionada pertence à escola do criador.
         if ($auth && !$auth->hasRole('Admin') && !empty($auth->id_escola)) {
             $isFromSameSchool = Turma::query()
                 ->where('id', $data['id_turma'] ?? null)

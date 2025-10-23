@@ -69,9 +69,9 @@ class SerieResource extends Resource
 
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->action(fn($records, $action) => app(SerieService::class)->deletarSerieEmMassa($records, $action)),
+
             ]);
     }
 

@@ -36,4 +36,14 @@ class SerieService {
         return true;
     }
 
+    public function deletarSerieEmMassa($records, $action): bool
+    {
+        foreach ($records as $record) {
+            $this->deletarSerie($record->id);
+
+            $action->halt();
+        }
+        return true;
+    }
+
 }
