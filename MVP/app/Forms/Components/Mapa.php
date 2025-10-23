@@ -9,6 +9,8 @@ class Mapa extends Field
     protected string $view = 'forms.components.mapa';
 
     protected bool $rotaAtiva = true;
+    
+    protected string $atualizarResumoRota;
 
     protected function setUp(): void
     {

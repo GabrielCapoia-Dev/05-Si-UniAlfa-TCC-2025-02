@@ -228,9 +228,30 @@ class RotaService
                                 ->columnSpan(12),
                         ])
                         ->columnSpan(5),
+
+                    Forms\Components\TextInput::make('distancia_total')
+                        ->label('Distância Total (km)')
+                        ->readOnly()
+                        ->columnSpan(6),
+
+                    Forms\Components\TextInput::make('tempo_estimado')
+                        ->label('Tempo Estimado (min)')
+                        ->readOnly()
+                        ->columnSpan(6),
+
                 ]),
         ];
     }
+
+    public function atualizarRota($rota, array $payload)
+    {
+        dd($payload, $rota);
+        $rota->geometry = $payload['geometry'];
+        $rota->waypoints = $payload['waypoints'];
+        $rota->legs = $payload['legs'];
+        $rota->save();
+    }
+
 
     /** Preenche o mapa com os pontos da rota do registro atual e retorna o array de pontos. */
     private function preencheMapaComPontosDaRota(Mapa $mapa, $estado, $registro)

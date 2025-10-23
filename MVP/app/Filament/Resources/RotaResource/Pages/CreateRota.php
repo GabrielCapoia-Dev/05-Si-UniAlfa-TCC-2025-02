@@ -6,6 +6,7 @@ use App\Filament\Resources\RotaResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
+use App\Services\RotaService;
 
 class CreateRota extends CreateRecord
 {
@@ -44,6 +45,21 @@ class CreateRota extends CreateRecord
 
         return $data;
     }
+
+
+    public function processarRota(array $payload)
+    {
+        // atualiza apenas campos do form sem resetar pontos
+        $this->form->fill([
+            'distancia_total' => round($payload['distance'] / 1000, 2),
+            'tempo_estimado'  => round($payload['duration'] / 60),
+            'geometry'        => $payload['geometry'] ?? null,
+            'waypoints'       => $payload['waypoints'] ?? null,
+            'legs'            => $payload['legs'] ?? null,
+        ], false); // false = mantém outros campos
+    }
+
+
 
     protected function afterCreate(): void
     {

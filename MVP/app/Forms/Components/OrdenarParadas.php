@@ -14,7 +14,6 @@ class OrdenarParadas extends Field
 
         $this->dehydrated(true);
         
-        // Normaliza os dados antes de salvar
         $this->dehydrateStateUsing(function ($state) {
             if (!is_array($state)) {
                 return [];
