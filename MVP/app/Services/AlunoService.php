@@ -326,15 +326,6 @@ class AlunoService
                     }
                 }),
 
-            SelectFilter::make('id_turma')
-                ->label('Turma')
-                ->searchable()
-                ->preload()
-                ->options($this->opcoesTurmaFiltro())
-                ->query(
-                    fn(Builder $query, array $data) =>
-                    !empty($data['value']) ? $query->where('id_turma', $data['value']) : null
-                ),
 
             SelectFilter::make('turma.turno')
                 ->label('Turno')
