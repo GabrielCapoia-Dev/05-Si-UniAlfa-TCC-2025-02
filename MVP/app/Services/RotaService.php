@@ -457,8 +457,8 @@ class RotaService
             return $data;
         }
 
-        $km    = (float)($data['distancia_total'] ?? 0);
-        $preco = (float)($data['valor_por_km'] ?? 0);
+        $km    = $this->parseNumber($data['distancia_total'] ?? 0);
+        $preco = $this->parseNumber($data['valor_por_km']    ?? 0);
 
         $data['valor_total'] = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
         return $data;
@@ -483,6 +483,7 @@ class RotaService
 
         return $this->recomputarValorTotal($data);
     }
+
     public function criarPontosTransaction($data, $record): void
     {
         $pontos  = $data['pontos']    ?? [];
@@ -557,43 +558,26 @@ class RotaService
         return $data;
     }
 
-    public function salvarRota($data, $record): void
+    // dentro de App\Services\RotaService
+
+    private function parseNumber(mixed $v): float
     {
-        $pontos  = $data['pontos']    ?? [];
-        $escolas = $data['escola_id'] ?? [];
+        if (is_null($v) || $v === '') return 0.0;
+        if (is_float($v) || is_int($v)) return (float) $v;
+        $s = (string) $v;
 
-        $this->pontosTmp  = $pontos;
-        $this->escolasTmp = $escolas;
+        // remove espaços / NBSP
+        $s = str_replace(["\u{00A0}", ' '], '', $s);
 
-        DB::transaction(function () use ($record) {
-            $record->escolas()->sync($this->escolasTmp ?? []);
+        if (str_contains($s, ',') && str_contains($s, '.')) {
+            // Formato brasileiro: 1.234,56 -> 1234.56
+            $s = str_replace('.', '', $s);
+            $s = str_replace(',', '.', $s);
+        } else {
+            // Se só tem vírgula, trate como decimal
+            $s = str_replace(',', '.', $s);
+        }
 
-            $existing = PontosDeParada::where('id_rota', $record->id)
-                ->get()
-                ->keyBy('id');
-
-            $seen = [];
-            foreach (array_values($this->pontosTmp ?? []) as $idx => $p) {
-                $attrs = [
-                    'latitude'  => (float) ($p['latitude']  ?? 0),
-                    'longitude' => (float) ($p['longitude'] ?? 0),
-                    'ordem'     => $idx + 1,
-                    'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
-                    'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
-                ];
-
-                if (!empty($p['id']) && $existing->has($p['id'])) {
-                    $existing[$p['id']]->fill($attrs)->save();
-                    $seen[] = (int) $p['id'];
-                } else {
-                    $record->pontosDeParada()->create($attrs);
-                }
-            }
-
-            $toDelete = $existing->keys()->diff($seen);
-            if ($toDelete->isNotEmpty()) {
-                PontosDeParada::whereIn('id', $toDelete)->delete();
-            }
-        });
+        return is_numeric($s) ? (float) $s : 0.0;
     }
 }

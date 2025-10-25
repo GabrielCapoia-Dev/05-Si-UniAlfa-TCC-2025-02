@@ -19,12 +19,12 @@ class CreateRota extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return app(RotaService::class)->mudarEstadoFormDepoisDeSalvar($data);
+        return app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit($data, $this->data ?? []);
     }
 
-    public function processarRota(array $payload, $data): void
+    public function processarRota(array $payload): void
     {
-        app(RotaService::class)->processarRota($payload, $data);
+        $this->data = app(RotaService::class)->processarRota($payload, $this->data ?? []);
     }
 
     protected function afterCreate($data, $record): void
@@ -40,22 +40,19 @@ class CreateRota extends CreateRecord
     {
         if ($name === 'data.pontos') {
             $qtd = is_array($value) ? count(array_filter($value)) : 0;
+
             if ($qtd < 2) {
-                $this->data['distancia_total'] = null;
-                $this->data['tempo_estimado']  = null;
-                $this->data['geometry']        = null;
-                $this->data['waypoints']       = null;
-                $this->data['legs']            = null;
-                $this->data['valor_total']     = 0.00;
+                $this->data = app(\App\Services\RotaService::class)
+                    ->zerarEstadoQuandoSemPontos($this->data ?? []);
             } else {
-                $this->recomputarValorTotal();
+                $this->data = app(\App\Services\RotaService::class)
+                    ->recomputarValorTotal($this->data ?? []);
             }
         }
 
         if ($name === 'data.valor_por_km') {
-            $this->recomputarValorTotal();
+            $this->data = app(\App\Services\RotaService::class)
+                ->recomputarValorTotal($this->data ?? []);
         }
     }
-
-
 }

@@ -75,9 +75,38 @@ class EditRota extends EditRecord
         return $data;
     }
 
-    protected function afterSave($data, $record): void
+    protected function afterSave(): void
     {
-        app(RotaService::class)->salvarRota($data, $record);
+        DB::transaction(function () {
+            $this->record->escolas()->sync($this->escolasTmp ?? []);
+
+            $existing = PontosDeParada::where('id_rota', $this->record->id)
+                ->get()
+                ->keyBy('id');
+
+            $seen = [];
+            foreach (array_values($this->pontosTmp ?? []) as $idx => $p) {
+                $attrs = [
+                    'latitude'  => (float) ($p['latitude']  ?? 0),
+                    'longitude' => (float) ($p['longitude'] ?? 0),
+                    'ordem'     => $idx + 1,
+                    'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
+                    'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
+                ];
+
+                if (!empty($p['id']) && $existing->has($p['id'])) {
+                    $existing[$p['id']]->fill($attrs)->save();
+                    $seen[] = (int) $p['id'];
+                } else {
+                    $this->record->pontosDeParada()->create($attrs);
+                }
+            }
+
+            $toDelete = $existing->keys()->diff($seen);
+            if ($toDelete->isNotEmpty()) {
+                PontosDeParada::whereIn('id', $toDelete)->delete();
+            }
+        });
     }
 
     /** Chamado pelo JS do mapa (this.$wire.call('processarRota', payload)) */
@@ -95,15 +124,19 @@ class EditRota extends EditRecord
     {
         if ($name === 'data.pontos') {
             $qtd = is_array($value) ? count(array_filter($value)) : 0;
+
             if ($qtd < 2) {
-                $this->data = app(RotaService::class)->zerarEstadoQuandoSemPontos($this->data ?? []);
+                $this->data = app(\App\Services\RotaService::class)
+                    ->zerarEstadoQuandoSemPontos($this->data ?? []);
             } else {
-                $this->data = app(RotaService::class)->recomputarValorTotal($this->data ?? []);
+                $this->data = app(\App\Services\RotaService::class)
+                    ->recomputarValorTotal($this->data ?? []);
             }
         }
 
         if ($name === 'data.valor_por_km') {
-            $this->data = app(RotaService::class)->recomputarValorTotal($this->data ?? []);
+            $this->data = app(\App\Services\RotaService::class)
+                ->recomputarValorTotal($this->data ?? []);
         }
     }
 }
