@@ -13,10 +13,7 @@ class EditRota extends EditRecord
 {
     protected static string $resource = RotaResource::class;
 
-    // ✅ estado do formulário (necessário para reatividade)
     public ?array $data = [];
-
-    /** Vamos guardar os pontos do form para usar no afterSave */
     protected array $pontosTmp = [];
     protected array $escolasTmp = [];
 
@@ -30,6 +27,7 @@ class EditRota extends EditRecord
         return $this->previousUrl ?? $this->getResource()::getUrl('index');
     }
 
+    // pré-processamento dos dados do banco
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $rows = PontosDeParada::with('escola:id,nome')
@@ -54,7 +52,7 @@ class EditRota extends EditRecord
         return $data;
     }
 
-    /** Depois de preencher o form com os dados do registro, garanta coerência do valor_total */
+    // pós-processamento do form já preenchido
     protected function afterFill(): void
     {
         $this->data = app(RotaService::class)->recomputarValorTotal($this->data ?? []);
@@ -62,14 +60,12 @@ class EditRota extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // guarda os arrays crus para o afterSave (pontos e escolas)
         $raw = $this->form->getRawState();
         $this->pontosTmp  = $raw['pontos']    ?? [];
         $this->escolasTmp = $raw['escola_id'] ?? [];
 
         unset($data['pontos'], $data['escola_id']);
 
-        // ✅ aplica a mesma regra do Create: hidrata dist/tempo/geo e valor_total coerente
         $data = app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit($data, $this->data ?? []);
 
         return $data;
@@ -83,59 +79,69 @@ class EditRota extends EditRecord
             $existing = PontosDeParada::where('id_rota', $this->record->id)
                 ->get()
                 ->keyBy('id');
+            $incoming = array_values($this->pontosTmp ?? []);
+            $incomingIds = collect($incoming)->pluck('id')->filter()->map(fn($v) => (int) $v)->values();
 
-            $seen = [];
-            foreach (array_values($this->pontosTmp ?? []) as $idx => $p) {
-                $attrs = [
-                    'latitude'  => (float) ($p['latitude']  ?? 0),
-                    'longitude' => (float) ($p['longitude'] ?? 0),
-                    'ordem'     => $idx + 1,
-                    'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
-                    'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
-                ];
-
-                if (!empty($p['id']) && $existing->has($p['id'])) {
-                    $existing[$p['id']]->fill($attrs)->save();
-                    $seen[] = (int) $p['id'];
-                } else {
-                    $this->record->pontosDeParada()->create($attrs);
-                }
+            $toDeleteFirst = $existing->keys()->diff($incomingIds);
+            if ($toDeleteFirst->isNotEmpty()) {
+                PontosDeParada::whereIn('id', $toDeleteFirst)->delete();
+                $existing = PontosDeParada::where('id_rota', $this->record->id)->get()->keyBy('id');
             }
 
-            $toDelete = $existing->keys()->diff($seen);
-            if ($toDelete->isNotEmpty()) {
-                PontosDeParada::whereIn('id', $toDelete)->delete();
+            $OFFSET = 100000;
+            foreach ($incoming as $idx => $p) {
+                if (!empty($p['id']) && $existing->has((int) $p['id'])) {
+                    $existing[(int) $p['id']]->update(['ordem' => $idx + 1 + $OFFSET]);
+                }
+            }
+            foreach ($incoming as $idx => $p) {
+                if (empty($p['id']) || !$existing->has((int) $p['id'])) {
+                    $this->record->pontosDeParada()->create([
+                        'latitude'  => (float) ($p['latitude']  ?? 0),
+                        'longitude' => (float) ($p['longitude'] ?? 0),
+                        'ordem'     => $idx + 1,
+                        'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
+                        'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
+                    ]);
+                }
+            }
+            foreach ($incoming as $idx => $p) {
+                if (!empty($p['id']) && $existing->has((int) $p['id'])) {
+                    $existing[(int) $p['id']]->fill([
+                        'latitude'  => (float) ($p['latitude']  ?? 0),
+                        'longitude' => (float) ($p['longitude'] ?? 0),
+                        'ordem'     => $idx + 1,
+                        'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
+                        'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
+                    ])->save();
+                }
             }
         });
     }
 
-    /** Chamado pelo JS do mapa (this.$wire.call('processarRota', payload)) */
+    /** Chamado pelo JS do mapa */
     public function processarRota(array $payload): void
     {
         $this->data = app(RotaService::class)->processarRota($payload, $this->data ?? []);
     }
 
-    /**
-     * Reatividade:
-     * - Se 'data.pontos' < 2: zera dist/tempo/geo e valor_total
-     * - Se 'data.valor_por_km' mudar: recalcula valor_total
-     */
+    // Livewire: dispara sempre que uma prop muda.
     public function updated($name, $value): void
     {
         if ($name === 'data.pontos') {
             $qtd = is_array($value) ? count(array_filter($value)) : 0;
 
             if ($qtd < 2) {
-                $this->data = app(\App\Services\RotaService::class)
+                $this->data = app(RotaService::class)
                     ->zerarEstadoQuandoSemPontos($this->data ?? []);
             } else {
-                $this->data = app(\App\Services\RotaService::class)
+                $this->data = app(RotaService::class)
                     ->recomputarValorTotal($this->data ?? []);
             }
         }
 
         if ($name === 'data.valor_por_km') {
-            $this->data = app(\App\Services\RotaService::class)
+            $this->data = app(RotaService::class)
                 ->recomputarValorTotal($this->data ?? []);
         }
     }

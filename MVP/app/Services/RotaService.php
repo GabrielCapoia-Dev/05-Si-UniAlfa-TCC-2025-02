@@ -11,10 +11,11 @@ use Filament\Forms;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Form;
 use App\Forms\Components\OrdenarParadas;
-use App\Models\Escola;
 use App\Models\PontosDeParada;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
+use App\Models\Escola;
 
 class RotaService
 {
@@ -187,7 +188,11 @@ class RotaService
                         ->label('Mapa da Rota')
                         ->rotaAtiva(true)
                         ->afterStateHydrated(fn(Mapa $component, $state, $record) => $this->preencheMapaComPontosDaRota($component, $state, $record))
+                        ->afterStateUpdated(function ($state, callable $get, callable $set, $livewire) {
+                            $this->syncAll($get, $set, $livewire, 'pontos');
+                        })
                         ->columnSpan(7),
+
 
                     Grid::make(12)
                         ->schema([
@@ -210,49 +215,15 @@ class RotaService
                                 ->label('Escolas')
                                 ->relationship('escolas', 'nome')
                                 ->multiple()
-                                ->preload()
                                 ->searchable()
                                 ->columnSpan(12)
                                 ->dehydrated(true)
-                                ->afterStateHydrated(fn($state, $get, $set, $record) => $this->preencheEscolasSelecionadasNosPontos($state, $get, $set, $record))
+                                ->afterStateHydrated(
+                                    fn($state, $get, $set, $record) =>
+                                    $this->preencheEscolasSelecionadasNosPontos($state, $get, $set, $record)
+                                )
                                 ->afterStateUpdated(function ($state, callable $get, callable $set, $livewire) {
-                                    $pontos = $get('pontos') ?? [];
-                                    $idsSelecionados = collect($state ?? [])->map(fn($v) => (int)$v)->all();
-
-                                    $pontos = array_values(array_filter($pontos, function ($p) use ($idsSelecionados) {
-                                        if (($p['tipo'] ?? '') !== 'escola') return true;
-                                        return in_array((int)($p['id_escola'] ?? 0), $idsSelecionados, true);
-                                    }));
-
-                                    $presentes = [];
-                                    foreach ($pontos as $p) {
-                                        if (($p['tipo'] ?? '') === 'escola' && isset($p['id_escola'])) {
-                                            $presentes[(int)$p['id_escola']] = true;
-                                        }
-                                    }
-                                    $faltando = array_values(array_diff($idsSelecionados, array_keys($presentes)));
-
-                                    if (!empty($faltando)) {
-                                        $escolas = Escola::whereIn('id', $faltando)->get(['id', 'nome', 'latitude', 'longitude']);
-                                        foreach ($escolas as $esc) {
-                                            if ($esc->latitude !== null && $esc->longitude !== null) {
-                                                $pontos[] = [
-                                                    'latitude'   => (float)$esc->latitude,
-                                                    'longitude'  => (float)$esc->longitude,
-                                                    'ordem'      => 0,
-                                                    'tipo'       => 'escola',
-                                                    'id_escola'  => (int)$esc->id,
-                                                    'rotulo'     => 'Escola ' . $esc->nome,
-                                                ];
-                                            }
-                                        }
-                                    }
-
-                                    foreach ($pontos as $i => &$p) $p['ordem'] = $i + 1;
-                                    unset($p);
-
-                                    $set('pontos', $pontos);
-                                    $livewire->dispatch('pontos-updated');
+                                    $this->syncAll($get, $set, $livewire, 'escola');
                                 }),
 
 
@@ -301,21 +272,218 @@ class RotaService
                         ->statePath('pontos')
                         ->label('Ordenar Paradas')
                         ->dehydrated(true)
+                        ->afterStateUpdated(function ($state, callable $get, callable $set, $livewire) {
+                            $this->syncEscolasFromPontos($state, $get, $set, $livewire);
+                        })
                         ->columnSpan(12),
+
 
                 ]),
         ];
     }
 
-    public function atualizarRota($rota, array $payload)
+    //** Forçar re-render de do livewire */
+    private function forceUpdatePontos(callable $set, array $pontos, $livewire = null): void
     {
-        dd($payload, $rota);
-        $rota->geometry = $payload['geometry'];
-        $rota->waypoints = $payload['waypoints'];
-        $rota->legs = $payload['legs'];
-        $rota->save();
+        $set('pontos', []);
+        $set('pontos', array_values($pontos));
+
+        $livewire?->dispatch('pontos-updated');
+        $livewire?->dispatch('ordenador-paradas-refresh');
     }
 
+    //** Sincronizar escolas com o componente de ordenação */
+    public function syncEscolasFromPontos($state, callable $get, callable $set, $livewire = null): void
+    {
+        $pontos = is_array($state) ? $state : ($get('pontos') ?? []);
+
+        $idsPontos = [];
+        foreach ($pontos as $p) {
+            if (($p['tipo'] ?? '') === 'escola' && isset($p['id_escola'])) {
+                $id = (int) $p['id_escola'];
+                if ($id) $idsPontos[$id] = true;
+            }
+        }
+        $idsNovos = array_values(array_keys($idsPontos));
+
+        $idsAtuais = collect($get('escola_id') ?? [])
+            ->map(fn($v) => (int) $v)
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($idsNovos !== $idsAtuais) {
+            $set('escola_id', $idsNovos);
+            $livewire?->dispatch('pontos-updated');
+        }
+    }
+
+    //** Formata um array de pontos para garantir que vai salvar da forma correta */
+    private function buildPontosNormalized(array $pontos): array
+    {
+        $norm = [];
+        foreach ($pontos as $p) {
+            if (!is_array($p) || !isset($p['latitude'], $p['longitude'])) {
+                continue;
+            }
+            $tipo = (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto';
+
+            $norm[] = [
+                'latitude'  => (float) $p['latitude'],
+                'longitude' => (float) $p['longitude'],
+                'tipo'      => $tipo,
+                'id_escola' => $tipo === 'escola'
+                    ? (isset($p['id_escola']) ? (int) $p['id_escola'] : null)
+                    : null,
+                'rotulo'    => $p['rotulo'] ?? ($tipo === 'escola' && !empty($p['id_escola'])
+                    ? ('Escola #' . (int) $p['id_escola'])
+                    : null),
+                'ordem'     => 0,
+            ];
+        }
+        foreach ($norm as $i => &$x) $x['ordem'] = $i + 1;
+        unset($x);
+
+        return $norm;
+    }
+
+    //** Extrai os ids das escolas do array de pontos */
+    private function escolaIdsFromPontos(array $pontos): array
+    {
+        $ids = [];
+        foreach ($pontos as $p) {
+            if (($p['tipo'] ?? '') === 'escola' && !empty($p['id_escola'])) {
+                $ids[(int) $p['id_escola']] = true;
+            }
+        }
+        return array_values(array_keys($ids));
+    }
+
+    //** Preenche os campos para o carregamento do formulário */
+    private function applyState(callable $set, array $state): void
+    {
+        $set('escola_id', $state['escola_id'] ?? []);
+        $set('pontos', []);
+        $set('pontos', array_values($state['pontos'] ?? []));
+
+        if (array_key_exists('valor_total', $state)) {
+            $set('valor_total', $state['valor_total']);
+        }
+    }
+
+    //** Sincroniza todos os campos para o carregamento do formulário */
+    public function syncAll(callable $get, callable $set, $livewire = null, string $source = 'pontos'): void
+    {
+        $state = [
+            'pontos'          => $this->buildPontosNormalized($get('pontos') ?? []),
+            'escola_id'       => collect($get('escola_id') ?? [])->map(fn($v) => (int) $v)->filter()->values()->all(),
+            'distancia_total' => $get('distancia_total'),
+            'tempo_estimado'  => $get('tempo_estimado'),
+            'geometry'        => $get('geometry'),
+            'waypoints'       => $get('waypoints'),
+            'legs'            => $get('legs'),
+            'valor_por_km'    => $get('valor_por_km'),
+        ];
+
+        if ($source === 'escola') {
+            $sel = array_flip($state['escola_id']);
+            $p = array_values(array_filter($state['pontos'], function ($x) use ($sel) {
+                if (($x['tipo'] ?? '') !== 'escola') return true;
+                $id = (int) ($x['id_escola'] ?? 0);
+                return isset($sel[$id]);
+            }));
+
+            $present = $this->escolaIdsFromPontos($p);
+            $missing = array_values(array_diff($state['escola_id'], $present));
+
+            if ($missing) {
+                $escolas = Escola::whereIn('id', $missing)
+                    ->get(['id', 'nome', 'latitude', 'longitude']);
+                foreach ($escolas as $esc) {
+                    if ($esc->latitude !== null && $esc->longitude !== null) {
+                        $p[] = [
+                            'latitude'   => (float) $esc->latitude,
+                            'longitude'  => (float) $esc->longitude,
+                            'ordem'      => 0,
+                            'tipo'       => 'escola',
+                            'id_escola'  => (int) $esc->id,
+                            'rotulo'     => 'Escola ' . $esc->nome,
+                        ];
+                    }
+                }
+            }
+            $state['pontos'] = $this->buildPontosNormalized($p);
+        } elseif ($source === 'pontos') {
+            $state['escola_id'] = $this->escolaIdsFromPontos($state['pontos']);
+        } elseif ($source === 'init') {
+            if (empty($state['escola_id'])) {
+                $state['escola_id'] = $this->escolaIdsFromPontos($state['pontos']);
+            }
+            $state['pontos'] = $this->buildPontosNormalized($state['pontos']);
+        } elseif ($source === 'preco') {
+        }
+
+        $tem2ouMais = count($state['pontos']) >= 2;
+        $km    = $this->parseNumber($state['distancia_total'] ?? 0);
+        $preco = $this->parseNumber($state['valor_por_km'] ?? 0);
+        $state['valor_total'] = ($tem2ouMais && $km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
+
+        $this->applyState($set, $state, $livewire);
+    }
+
+    //** Valida a composição da rota. Se falhar, lança uma notificação. */
+    private function validarComposicaoMinimaOuFalhar(array $state): void
+    {
+        $pontos   = $state['pontos']    ?? [];
+        $escolasS = $state['escola_id'] ?? [];
+
+        $validos = array_values(array_filter(
+            $pontos,
+            fn($p) => is_array($p) && isset($p['latitude'], $p['longitude'])
+        ));
+        $qtdValidos = count($validos);
+
+        $temEscola = false;
+        $temPonto  = false;
+        foreach ($validos as $p) {
+            $tipo = $p['tipo'] ?? 'ponto';
+            if ($tipo === 'escola') $temEscola = true;
+            else $temPonto = true;
+            if ($temEscola && $temPonto) break;
+        }
+
+        $temEscolaSelecionada = is_array($escolasS) && count(array_filter($escolasS)) > 0;
+
+        $erros = [];
+        if ($qtdValidos < 2) {
+            $erros[] = 'Inclua pelo menos 2 paradas no mapa.';
+        }
+        if (!$temEscola) {
+            $erros[] = 'Inclua pelo menos 1 escola entre as paradas.';
+        }
+        if (!$temPonto) {
+            $erros[] = 'Inclua pelo menos 1 ponto de parada (aluno/parada).';
+        }
+        if (!$temEscolaSelecionada) {
+            $erros[] = 'Selecione pelo menos 1 escola na lista de escolas.';
+        }
+
+        if (!empty($erros)) {
+            $mensagem = "Rota incompleta:\n- " . implode("\n- ", $erros);
+
+            Notification::make()
+                ->title('Não foi possível salvar')
+                ->body($mensagem)
+                ->danger()
+                ->persistent()
+                ->send();
+
+            throw ValidationException::withMessages([
+                'pontos'     => 'Para salvar a rota, é necessário: pelo menos 1 escola e 1 ponto.',
+                'escola_id'  => $temEscolaSelecionada ? null : 'Selecione ao menos uma escola.',
+            ]);
+        }
+    }
 
     /** Preenche o mapa com os pontos da rota do registro atual e retorna o array de pontos. */
     private function preencheMapaComPontosDaRota(Mapa $mapa, $estado, $registro)
@@ -347,92 +515,71 @@ class RotaService
         return $pontos;
     }
 
-    /** Garante que as escolas selecionadas virem pontos no mapa (cria faltantes e reordena). */
+    /** Preenche o array de escolas selecionadas nos pontos da rota do registro atual. */
     private function preencheEscolasSelecionadasNosPontos($estado, callable $obter, callable $definir, $registro)
     {
-        if ($registro && !empty($obter('pontos'))) return;
-
         $pontos = $obter('pontos') ?? [];
-        $idsEscolasSelecionadas = collect($estado ?? [])->map(fn($v) => (int) $v)->all();
+        $idsSelecionadas = collect($estado ?? [])
+            ->map(fn($v) => (int) $v)
+            ->filter()
+            ->values()
+            ->all();
 
-        if (empty($idsEscolasSelecionadas)) return;
+        $idsFromPontos = collect($pontos)
+            ->filter(fn($p) => ($p['tipo'] ?? null) === 'escola' && !empty($p['id_escola']))
+            ->pluck('id_escola')
+            ->map(fn($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
 
-        $escolasJaNosPontos = [];
-        foreach ($pontos as $ponto) {
-            if (($ponto['tipo'] ?? null) === 'escola' && isset($ponto['id_escola'])) {
-                $escolasJaNosPontos[(int) $ponto['id_escola']] = true;
-            }
+        if ($registro && empty($idsSelecionadas) && !empty($idsFromPontos)) {
+            $idsSelecionadas = $idsFromPontos;
+            $definir('escola_id', $idsSelecionadas);
         }
 
-        $idsEscolasFaltantes = array_values(array_diff($idsEscolasSelecionadas, array_keys($escolasJaNosPontos)));
-        if (!empty($idsEscolasFaltantes)) {
-            $escolas = Escola::whereIn('id', $idsEscolasFaltantes)->get(['id', 'nome', 'latitude', 'longitude']);
-            foreach ($escolas as $escola) {
-                if ($escola->latitude !== null && $escola->longitude !== null) {
+        $pontos = array_values(array_filter($pontos, function ($p) use ($idsSelecionadas) {
+            if (($p['tipo'] ?? '') !== 'escola') return true;
+            return in_array((int) ($p['id_escola'] ?? 0), $idsSelecionadas, true);
+        }));
+
+        $presentes = [];
+        foreach ($pontos as $p) {
+            if (($p['tipo'] ?? '') === 'escola' && isset($p['id_escola'])) {
+                $presentes[(int) $p['id_escola']] = true;
+            }
+        }
+        $faltando = array_values(array_diff($idsSelecionadas, array_keys($presentes)));
+
+        if (!empty($faltando)) {
+            $escolas = \App\Models\Escola::whereIn('id', $faltando)->get(['id', 'nome', 'latitude', 'longitude']);
+            foreach ($escolas as $esc) {
+                if ($esc->latitude !== null && $esc->longitude !== null) {
                     $pontos[] = [
-                        'latitude'   => (float) $escola->latitude,
-                        'longitude'  => (float) $escola->longitude,
+                        'latitude'   => (float) $esc->latitude,
+                        'longitude'  => (float) $esc->longitude,
                         'ordem'      => 0,
                         'tipo'       => 'escola',
-                        'id_escola'  => (int) $escola->id,
-                        'rotulo'     => 'Escola ' . $escola->nome,
+                        'id_escola'  => (int) $esc->id,
+                        'rotulo'     => 'Escola ' . $esc->nome,
                     ];
                 }
             }
-            foreach ($pontos as $i => &$ponto) $ponto['ordem'] = $i + 1;
-            unset($ponto);
-
-            $definir('pontos', $pontos);
         }
 
+        foreach ($pontos as $i => &$p) $p['ordem'] = $i + 1;
+        unset($p);
+
+        $this->forceUpdatePontos($definir, $pontos, null);
+
+        request()->session();
+        if (function_exists('filament')) {
+            filament()->getCurrentPanel();
+        }
         return $pontos;
     }
 
-    public function mudarEstadoFormDepoisDeSalvar($data): array
-    {
-        return $this->atualizarForm($data);
-    }
-
-    private function atualizarForm($data): array
-    {
-        $pontos  = $data['pontos']    ?? [];
-        $escolas = $data['escola_id'] ?? [];
-
-        if (count($pontos) < 2) {
-            throw ValidationException::withMessages([
-                'pontos' => 'Adicione ao menos 2 paradas para a rota.',
-            ]);
-        }
-
-        if (empty($escolas)) {
-            throw ValidationException::withMessages([
-                'escola_id' => 'Selecione ao menos uma escola.',
-            ]);
-        }
-
-        $this->pontosTmp  = $pontos;
-        $this->escolasTmp = $escolas;
-
-        unset($data['pontos'], $data['escola_id']);
-
-        $data['distancia_total'] = $data['distancia_total'] ?? null;
-        $data['tempo_estimado']  = $data['tempo_estimado']  ?? null;
-        $data['geometry']        = $data['geometry']        ?? null;
-        $data['waypoints']       = $data['waypoints']       ?? null;
-        $data['legs']            = $data['legs']            ?? null;
-
-        if (!$this->temParadasOrdenadas($data)) {
-            $data['valor_total'] = 0.00;
-        } else {
-            $km    = (float)($data['distancia_total'] ?? 0);
-            $preco = (float)($data['valor_por_km']    ?? $data['valor_por_km'] ?? 0);
-            $data['valor_total'] = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
-        }
-
-        return $data;
-    }
-
-
+    //* Verifica se a rota tem paradas ordenadas.
     private function temParadasOrdenadas($data): bool
     {
         if (!$data) {
@@ -450,6 +597,7 @@ class RotaService
         return count($validos) >= 2;
     }
 
+    // Recalcula o valor total da rota.
     public function recomputarValorTotal(array $data): array
     {
         if (!$this->temParadasOrdenadas($data)) {
@@ -464,6 +612,7 @@ class RotaService
         return $data;
     }
 
+    // Processa rota recebida do JS do mapa.
     public function processarRota(array $payload, ?array $data): array
     {
         $data = $data ?? [];
@@ -484,6 +633,7 @@ class RotaService
         return $this->recomputarValorTotal($data);
     }
 
+    // Cria pontos de rota, se houver, e sincroniza com escolas.
     public function criarPontosTransaction($data, $record): void
     {
         $pontos  = $data['pontos']    ?? [];
@@ -521,7 +671,7 @@ class RotaService
         });
     }
 
-    /** Zera dist/tempo/geo e valor_total quando não há 2+ pontos. */
+    // Zera estado quando nenhuma rota tem pontos e reza o valor total.
     public function zerarEstadoQuandoSemPontos(array $state): array
     {
         $state['distancia_total'] = null;
@@ -533,14 +683,11 @@ class RotaService
         return $state;
     }
 
-    /**
-     * Normaliza o array $data antes de salvar na EDIÇÃO,
-     * hidratando dist/tempo/geo e consolidando valor_total (ou zerando).
-     * Use também no CREATE se preferir — a assinatura aceita $state.
-     */
+    // Muda o estado do formulário antes de salvar uma rota editada.
     public function mudarEstadoFormAntesDeSalvarEdit(array $data, array $state): array
     {
-        // traga valores calculados do $state (úteis se inputs estão disabled/readOnly)
+        $this->validarComposicaoMinimaOuFalhar($state);
+
         $data['distancia_total'] = $state['distancia_total'] ?? null;
         $data['tempo_estimado']  = $state['tempo_estimado']  ?? null;
         $data['geometry']        = $state['geometry']        ?? null;
@@ -558,23 +705,19 @@ class RotaService
         return $data;
     }
 
-    // dentro de App\Services\RotaService
-
-    private function parseNumber(mixed $v): float
+    // Formata pontos.
+    private function parseNumber(mixed $value): float
     {
-        if (is_null($v) || $v === '') return 0.0;
-        if (is_float($v) || is_int($v)) return (float) $v;
-        $s = (string) $v;
+        if (is_null($value) || $value === '') return 0.0;
+        if (is_float($value) || is_int($value)) return (float) $value;
 
-        // remove espaços / NBSP
+        $s = (string) $value;
         $s = str_replace(["\u{00A0}", ' '], '', $s);
 
         if (str_contains($s, ',') && str_contains($s, '.')) {
-            // Formato brasileiro: 1.234,56 -> 1234.56
             $s = str_replace('.', '', $s);
             $s = str_replace(',', '.', $s);
         } else {
-            // Se só tem vírgula, trate como decimal
             $s = str_replace(',', '.', $s);
         }
 

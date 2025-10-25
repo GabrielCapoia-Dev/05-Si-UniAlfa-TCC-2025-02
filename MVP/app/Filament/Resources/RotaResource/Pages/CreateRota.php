@@ -19,7 +19,10 @@ class CreateRota extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit($data, $this->data ?? []);
+        return app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit(
+            $data,
+            $this->data ?? []
+        );
     }
 
     public function processarRota(array $payload): void
@@ -27,31 +30,32 @@ class CreateRota extends CreateRecord
         $this->data = app(RotaService::class)->processarRota($payload, $this->data ?? []);
     }
 
-    protected function afterCreate($data, $record): void
+    protected function afterCreate(): void
     {
-        app(RotaService::class)->criarPontosTransaction($data, $record);
+        $data = $this->data ?? $this->form->getState();
+        $record = $this->record;
+
+        app(RotaService::class)
+            ->criarPontosTransaction($data, $record);
     }
 
-    /**
-     * Livewire: dispara sempre que uma prop muda.
-     * Aqui monitoramos 'data.pontos' e 'data.valor_por_km'.
-     */
+    //  Livewire: dispara sempre que uma prop muda.
     public function updated($name, $value): void
     {
         if ($name === 'data.pontos') {
             $qtd = is_array($value) ? count(array_filter($value)) : 0;
 
             if ($qtd < 2) {
-                $this->data = app(\App\Services\RotaService::class)
+                $this->data = app(RotaService::class)
                     ->zerarEstadoQuandoSemPontos($this->data ?? []);
             } else {
-                $this->data = app(\App\Services\RotaService::class)
+                $this->data = app(RotaService::class)
                     ->recomputarValorTotal($this->data ?? []);
             }
         }
 
         if ($name === 'data.valor_por_km') {
-            $this->data = app(\App\Services\RotaService::class)
+            $this->data = app(RotaService::class)
                 ->recomputarValorTotal($this->data ?? []);
         }
     }
