@@ -10,25 +10,38 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Rota extends Model
 {
-    use HasFactory;
-    use Notifiable;
-    use LogsActivity;
+    use HasFactory, Notifiable, LogsActivity;
 
     protected $table = 'rotas';
+
     protected $fillable = [
         'nome',
         'turno',
+        'distancia_total',
+        'tempo_estimado',
+        'geometry',
+        'waypoints',
+        'legs',
+        'valor_por_km',
+        'valor_total',
     ];
 
+    protected $casts = [
+        'distancia_total' => 'float',
+        'tempo_estimado'  => 'integer',
+        'geometry'        => 'array',
+        'waypoints'       => 'array',
+        'legs'            => 'array',
+        'valor_por_km'    => 'float',
+        'valor_total'     => 'float',
+    ];
 
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly([
-                'nome',
-                'turno',
-            ]);
+            ->logOnly(['nome', 'turno', 'distancia_total', 'tempo_estimado'])
+            ->dontLogIfAttributesChangedOnly(['geometry', 'waypoints', 'legs']);
     }
 
     public function alunos()

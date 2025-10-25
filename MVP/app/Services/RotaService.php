@@ -13,9 +13,14 @@ use Filament\Forms\Form;
 use App\Forms\Components\OrdenarParadas;
 use App\Models\Escola;
 use App\Models\PontosDeParada;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 
 class RotaService
 {
+
+    protected array $pontosTmp = [];
+    protected array $escolasTmp = [];
 
     //** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
     public function configurarTabela(Table $table, ?User $user): Table
@@ -29,13 +34,11 @@ class RotaService
             ->bulkActions($this->acoesEmMassa($user))
             ->defaultSort('updated_at', 'desc')
             ->striped();
-
     }
 
     //** Modifica a query da tabela para retornar os contadores dos dados */
     private function aplicarContadores(Builder $query): Builder
     {
-        // ACHO QUE ESSE METODO VAI AJUDAR COM A EXPORTAÇÃO DE RELATORIOS ESTRAGEGICOS
         return $query
             ->withCount([
                 'pontosDeParada',
@@ -65,24 +68,56 @@ class RotaService
             Tables\Columns\TextColumn::make('pontos_de_parada_count')
                 ->label('Paradas')
                 ->numeric()
-                ->sortable(),
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('escolas_count')
                 ->label('Escolas')
                 ->numeric()
-                ->sortable(),
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('pontos_count')
                 ->label('Pontos')
                 ->numeric()
-                ->toggleable(),
+                ->toggleable()
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('distancia_total')
+                ->label('Distancia Total')
+                ->numeric()
+                ->sortable()
+                ->suffix(' km')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('tempo_estimado')
+                ->label('Tempo Estimado')
+                ->numeric()
+                ->sortable()
+                ->suffix(' min')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('valor_por_km')
+                ->label('Valor por Km')
+                ->numeric()
+                ->sortable()
+                ->prefix('R$ ')
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('valor_total')
+                ->label('Valor Total')
+                ->numeric()
+                ->sortable()
+                ->prefix('R$ ')
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('escolas.nome')
                 ->label('Escolas')
                 ->badge()
                 ->limitList(3)
                 ->separator(', ')
-                ->toggleable(),
+                ->toggleable()
+                ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('created_at')
                 ->dateTime()
@@ -159,7 +194,17 @@ class RotaService
                             Forms\Components\TextInput::make('nome')
                                 ->required()
                                 ->maxLength(255)
-                                ->columnSpan(12),
+                                ->columnSpan(6),
+
+                            Forms\Components\Select::make('turno')
+                                ->options([
+                                    'Manhã' => 'Manhã',
+                                    'Tarde' => 'Tarde',
+                                    'Noite' => 'Noite',
+                                    'Integral' => 'Integral',
+                                ])
+                                ->required()
+                                ->columnSpan(6),
 
                             Forms\Components\Select::make('escola_id')
                                 ->label('Escolas')
@@ -211,33 +256,52 @@ class RotaService
                                 }),
 
 
-                            OrdenarParadas::make('ordenador_paradas')
-                                ->statePath('pontos')
-                                ->label('Ordenar Paradas')
-                                ->dehydrated(true)
+
+                            Forms\Components\TextInput::make('distancia_total')
+                                ->label('Distância Total')
+                                ->numeric()
+                                ->disabled()
+                                ->suffix(' km')
+                                ->readOnly()
+                                ->columnSpan(6),
+
+                            Forms\Components\TextInput::make('tempo_estimado')
+                                ->label('Tempo Estimado')
+                                ->numeric()
+                                ->disabled()
+                                ->suffix(' min')
+                                ->readOnly()
+                                ->columnSpan(6),
+
+                            Forms\Components\TextInput::make('valor_por_km')
+                                ->label('Valor por Km')
+                                ->numeric()
+                                ->prefix('R$ ')
+                                ->live(debounce: 300)
+                                ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                    $km    = (float) ($get('distancia_total') ?? 0);
+                                    $preco = (float) ($state ?? 0);
+
+                                    $total = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
+                                    $set('valor_total', $total);
+                                })
                                 ->columnSpan(12),
 
-                            Forms\Components\Select::make('turno')
-                                ->options([
-                                    'Manhã' => 'Manhã',
-                                    'Tarde' => 'Tarde',
-                                    'Noite' => 'Noite',
-                                    'Integral' => 'Integral',
-                                ])
-                                ->required()
+                            Forms\Components\TextInput::make('valor_total')
+                                ->label('Valor Total')
+                                ->numeric()
+                                ->prefix('R$ ')
+                                ->readOnly()
+                                ->disabled()
+                                ->dehydrated()
                                 ->columnSpan(12),
                         ])
                         ->columnSpan(5),
-
-                    Forms\Components\TextInput::make('distancia_total')
-                        ->label('Distância Total (km)')
-                        ->readOnly()
-                        ->columnSpan(6),
-
-                    Forms\Components\TextInput::make('tempo_estimado')
-                        ->label('Tempo Estimado (min)')
-                        ->readOnly()
-                        ->columnSpan(6),
+                    OrdenarParadas::make('ordenador_paradas')
+                        ->statePath('pontos')
+                        ->label('Ordenar Paradas')
+                        ->dehydrated(true)
+                        ->columnSpan(12),
 
                 ]),
         ];
@@ -322,5 +386,214 @@ class RotaService
         }
 
         return $pontos;
+    }
+
+    public function mudarEstadoFormDepoisDeSalvar($data): array
+    {
+        return $this->atualizarForm($data);
+    }
+
+    private function atualizarForm($data): array
+    {
+        $pontos  = $data['pontos']    ?? [];
+        $escolas = $data['escola_id'] ?? [];
+
+        if (count($pontos) < 2) {
+            throw ValidationException::withMessages([
+                'pontos' => 'Adicione ao menos 2 paradas para a rota.',
+            ]);
+        }
+
+        if (empty($escolas)) {
+            throw ValidationException::withMessages([
+                'escola_id' => 'Selecione ao menos uma escola.',
+            ]);
+        }
+
+        $this->pontosTmp  = $pontos;
+        $this->escolasTmp = $escolas;
+
+        unset($data['pontos'], $data['escola_id']);
+
+        $data['distancia_total'] = $data['distancia_total'] ?? null;
+        $data['tempo_estimado']  = $data['tempo_estimado']  ?? null;
+        $data['geometry']        = $data['geometry']        ?? null;
+        $data['waypoints']       = $data['waypoints']       ?? null;
+        $data['legs']            = $data['legs']            ?? null;
+
+        if (!$this->temParadasOrdenadas($data)) {
+            $data['valor_total'] = 0.00;
+        } else {
+            $km    = (float)($data['distancia_total'] ?? 0);
+            $preco = (float)($data['valor_por_km']    ?? $data['valor_por_km'] ?? 0);
+            $data['valor_total'] = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
+        }
+
+        return $data;
+    }
+
+
+    private function temParadasOrdenadas($data): bool
+    {
+        if (!$data) {
+            return false;
+        }
+        $ordem = $data['ordenar_paradas'] ?? $data['pontos'] ?? [];
+        if (!is_array($ordem)) return false;
+
+        $validos = array_values(array_filter(
+            $ordem,
+            fn($p) =>
+            is_array($p) && isset($p['latitude'], $p['longitude'])
+        ));
+
+        return count($validos) >= 2;
+    }
+
+    public function recomputarValorTotal(array $data): array
+    {
+        if (!$this->temParadasOrdenadas($data)) {
+            $data['valor_total'] = 0.00;
+            return $data;
+        }
+
+        $km    = (float)($data['distancia_total'] ?? 0);
+        $preco = (float)($data['valor_por_km'] ?? 0);
+
+        $data['valor_total'] = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
+        return $data;
+    }
+
+    public function processarRota(array $payload, ?array $data): array
+    {
+        $data = $data ?? [];
+
+        $metros   = (float)($payload['distance']  ?? 0);
+        $segundos = (float)($payload['duration'] ?? 0);
+
+        $km  = round($metros / 1000, 2);
+        $min = (int) round($segundos / 60);
+
+        $data['distancia_total'] = $km ?: null;
+        $data['tempo_estimado']  = $min ?: null;
+
+        $data['geometry']  = $payload['geometry']  ?? null;
+        $data['waypoints'] = $payload['waypoints'] ?? null;
+        $data['legs']      = $payload['legs']      ?? null;
+
+        return $this->recomputarValorTotal($data);
+    }
+    public function criarPontosTransaction($data, $record): void
+    {
+        $pontos  = $data['pontos']    ?? [];
+        $escolas = $data['escola_id'] ?? [];
+
+        $this->pontosTmp  = $pontos;
+        $this->escolasTmp = $escolas;
+
+        DB::transaction(function () use ($record) {
+            if (!empty($this->escolasTmp)) {
+                $record->escolas()->sync($this->escolasTmp);
+            }
+
+            $payload = [];
+            foreach ($this->pontosTmp as $i => $p) {
+                $lat = $p['latitude']  ?? null;
+                $lng = $p['longitude'] ?? null;
+                if ($lat === null || $lng === null) continue;
+
+                $tipo      = ($p['tipo'] ?? 'ponto') === 'escola' ? 'escola' : 'ponto';
+                $idEscola  = $tipo === 'escola' ? ($p['id_escola'] ?? null) : null;
+
+                $payload[] = [
+                    'latitude'   => (float) $lat,
+                    'longitude'  => (float) $lng,
+                    'ordem'      => (int) ($p['ordem'] ?? ($i + 1)),
+                    'tipo'       => $tipo,
+                    'id_escola'  => $idEscola,
+                ];
+            }
+
+            if ($payload) {
+                $record->pontosDeParada()->createMany($payload);
+            }
+        });
+    }
+
+    /** Zera dist/tempo/geo e valor_total quando não há 2+ pontos. */
+    public function zerarEstadoQuandoSemPontos(array $state): array
+    {
+        $state['distancia_total'] = null;
+        $state['tempo_estimado']  = null;
+        $state['geometry']        = null;
+        $state['waypoints']       = null;
+        $state['legs']            = null;
+        $state['valor_total']     = 0.00;
+        return $state;
+    }
+
+    /**
+     * Normaliza o array $data antes de salvar na EDIÇÃO,
+     * hidratando dist/tempo/geo e consolidando valor_total (ou zerando).
+     * Use também no CREATE se preferir — a assinatura aceita $state.
+     */
+    public function mudarEstadoFormAntesDeSalvarEdit(array $data, array $state): array
+    {
+        // traga valores calculados do $state (úteis se inputs estão disabled/readOnly)
+        $data['distancia_total'] = $state['distancia_total'] ?? null;
+        $data['tempo_estimado']  = $state['tempo_estimado']  ?? null;
+        $data['geometry']        = $state['geometry']        ?? null;
+        $data['waypoints']       = $state['waypoints']       ?? null;
+        $data['legs']            = $state['legs']            ?? null;
+
+        if (!$this->temParadasOrdenadas($state)) {
+            $data['valor_total'] = 0.00;
+        } else {
+            $km    = (float)($data['distancia_total'] ?? 0);
+            $preco = (float)($data['valor_por_km']    ?? $state['valor_por_km'] ?? 0);
+            $data['valor_total'] = ($km > 0 && $preco > 0) ? round($km * $preco, 2) : 0.00;
+        }
+
+        return $data;
+    }
+
+    public function salvarRota($data, $record): void
+    {
+        $pontos  = $data['pontos']    ?? [];
+        $escolas = $data['escola_id'] ?? [];
+
+        $this->pontosTmp  = $pontos;
+        $this->escolasTmp = $escolas;
+
+        DB::transaction(function () use ($record) {
+            $record->escolas()->sync($this->escolasTmp ?? []);
+
+            $existing = PontosDeParada::where('id_rota', $record->id)
+                ->get()
+                ->keyBy('id');
+
+            $seen = [];
+            foreach (array_values($this->pontosTmp ?? []) as $idx => $p) {
+                $attrs = [
+                    'latitude'  => (float) ($p['latitude']  ?? 0),
+                    'longitude' => (float) ($p['longitude'] ?? 0),
+                    'ordem'     => $idx + 1,
+                    'tipo'      => (($p['tipo'] ?? 'ponto') === 'escola') ? 'escola' : 'ponto',
+                    'id_escola' => (($p['tipo'] ?? 'ponto') === 'escola') ? ($p['id_escola'] ?? null) : null,
+                ];
+
+                if (!empty($p['id']) && $existing->has($p['id'])) {
+                    $existing[$p['id']]->fill($attrs)->save();
+                    $seen[] = (int) $p['id'];
+                } else {
+                    $record->pontosDeParada()->create($attrs);
+                }
+            }
+
+            $toDelete = $existing->keys()->diff($seen);
+            if ($toDelete->isNotEmpty()) {
+                PontosDeParada::whereIn('id', $toDelete)->delete();
+            }
+        });
     }
 }

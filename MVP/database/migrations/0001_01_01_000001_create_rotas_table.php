@@ -14,7 +14,15 @@ return new class extends Migration
         Schema::create('rotas', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
-            $table->enum('turno', ['Manhã', 'Tarde','Noite','Integral']);
+            $table->enum('turno', ['Manhã', 'Tarde', 'Noite', 'Integral']);
+            $table->decimal('distancia_total', 8, 2)->nullable()->comment('km');
+            $table->unsignedInteger('tempo_estimado')->nullable()->comment('min');
+            $table->double('valor_por_km')->nullable();
+            $table->double('valor_total')->nullable();
+            $table->json('geometry')->nullable();
+            $table->json('waypoints')->nullable();
+            $table->json('legs')->nullable();
+
             $table->timestamps();
         });
     }
