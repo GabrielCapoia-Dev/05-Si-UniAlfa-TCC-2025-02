@@ -10,17 +10,21 @@ use Illuminate\Support\Arr;
 
 class RotasComPontosSeeder extends Seeder
 {
-    // Box de Umuarama
+    // Box de Umuarama (lat/lng aproximados)
     private const LAT_MIN = -23.84628485;
     private const LAT_MAX = -23.75628485;
     private const LNG_MIN = -53.40628485;
     private const LNG_MAX = -53.20628485;
 
     // Quantidade de rotas
-    private const QTD_ROTAS = 135;
+    private const QTD_ROTAS = 35;
 
     // Turnos
     private const TURNOS = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+
+    // Faixa para sortear valor_por_km ao redor da média 9,75
+    private const VALOR_KM_MIN = 4.50;
+    private const VALOR_KM_MAX = 15.00; // média (min+max)/2 = 9.75
 
     public function run(): void
     {
@@ -35,17 +39,18 @@ class RotasComPontosSeeder extends Seeder
             $turno = Arr::random(self::TURNOS);
             $nome  = sprintf('Rota %s %02d', $turno, $i);
 
+            // Cria rota básica
             $rota = Rota::create([
                 'nome'  => $nome,
                 'turno' => $turno,
             ]);
 
-            // Seleciona 4–7 escolas aleatórias e vincula
-            $qtdEscolas = rand(2, 4);
+            // Seleciona 2–4 escolas aleatórias e vincula
+            $qtdEscolas    = rand(2, 4);
             $escolasDaRota = $escolas->random($qtdEscolas)->values();
             $rota->escolas()->attach($escolasDaRota->pluck('id')->all());
 
-            // Monta lista de pontos: um por escola + 6–10 pontos livres
+            // Monta lista de pontos: um por escola + 3–5 pontos livres
             $pontos = [];
 
             foreach ($escolasDaRota as $esc) {
@@ -72,8 +77,29 @@ class RotasComPontosSeeder extends Seeder
                 ];
             }
 
-            // Define a sequência por "vizinho mais próximo"
+            // Ordena os pontos por "vizinho mais próximo"
             $sequenciados = $this->orderByNearest($pontos);
+
+            // Calcula distância total (km)
+            $distKm = $this->distanciaTotalKm($sequenciados);
+            $distKm = round($distKm, 2);
+
+            // Estima tempo (min) com velocidade aleatória 28–40 km/h
+            $velKmH = $this->randFloat(28, 40);
+            $tempoMin = max(5, (int) round(($distKm / max(0.1, $velKmH)) * 60)); // mínimo 5 min
+
+            // Sorteia valor_por_km ~ média 9,75
+            $valorPorKm = round($this->randFloat(self::VALOR_KM_MIN, self::VALOR_KM_MAX), 2);
+            $valorTotal = round($distKm * $valorPorKm, 2);
+
+            // (Opcional) geometry simples baseada na sequência (GeoJSON LineString)
+            $geometry = [
+                'type'        => 'LineString',
+                'coordinates' => array_map(
+                    fn($p) => [(float) $p['longitude'], (float) $p['latitude']],
+                    $sequenciados
+                ),
+            ];
 
             // Prepara payload final com ordem e timestamps
             $ordem = 1;
@@ -91,9 +117,20 @@ class RotasComPontosSeeder extends Seeder
                 ];
             }
 
+            // Persiste pontos
             PontosDeParada::insert($payload);
-        }
 
+            // Atualiza a rota com os campos fictícios
+            $rota->update([
+                'distancia_total' => $distKm,
+                'tempo_estimado'  => $tempoMin,
+                'geometry'        => $geometry, // pode usar null se preferir
+                'waypoints'       => null,
+                'legs'            => null,
+                'valor_por_km'    => $valorPorKm,
+                'valor_total'     => $valorTotal,
+            ]);
+        }
     }
 
     private function randFloat(float $min, float $max): float
@@ -101,22 +138,41 @@ class RotasComPontosSeeder extends Seeder
         return $min + (lcg_value() * ($max - $min));
     }
 
-    private function coordOrFallback(?float $value, float $min, float $max): float
+    private function coordOrFallback(?float $valor, float $min, float $max): float
     {
-        return is_null($value) ? $this->randFloat($min, $max) : $value;
+        return is_null($valor) ? $this->randFloat($min, $max) : $valor;
     }
 
     /**
-     * Aplica heurística do vizinho mais próximo.
-     * - Começa de uma escola aleatória (se existir), senão um ponto aleatório
-     * - A cada passo escolhe o ponto restante com menor distância Haversine
+     * Distância total percorrendo os pontos na ordem (km).
+     */
+    private function distanciaTotalKm(array $pontos): float
+    {
+        if (count($pontos) < 2) return 0.0;
+
+        $total = 0.0;
+        for ($i = 1; $i < count($pontos); $i++) {
+            $a = $pontos[$i - 1];
+            $b = $pontos[$i];
+            $total += $this->haversine(
+                (float) $a['latitude'],
+                (float) $a['longitude'],
+                (float) $b['latitude'],
+                (float) $b['longitude']
+            );
+        }
+        return $total;
+    }
+
+    /**
+     * Heurística do vizinho mais próximo.
+     * - Começa por uma escola (se houver), senão por um ponto aleatório
      */
     private function orderByNearest(array $pontos): array
     {
         if (count($pontos) <= 1) return $pontos;
 
-        // Preferir iniciar por uma escola (se houver)
-        $indicesEscolas = array_keys(array_filter($pontos, fn ($p) => $p['tipo'] === 'escola'));
+        $indicesEscolas = array_keys(array_filter($pontos, fn($p) => $p['tipo'] === 'escola'));
         $startIndex = $indicesEscolas
             ? $indicesEscolas[array_rand($indicesEscolas)]
             : array_rand($pontos);
@@ -125,7 +181,6 @@ class RotasComPontosSeeder extends Seeder
         $restantes = array_keys($pontos);
         $atualIdx  = $startIndex;
 
-        // Move start para visitados
         $visitados[] = $pontos[$atualIdx];
         $restantes   = array_values(array_diff($restantes, [$atualIdx]));
 
@@ -149,7 +204,6 @@ class RotasComPontosSeeder extends Seeder
                 }
             }
 
-            // adiciona o mais próximo e remove da lista de restantes
             $visitados[] = $pontos[$proxIdx];
             $restantes   = array_values(array_diff($restantes, [$proxIdx]));
         }
@@ -165,10 +219,10 @@ class RotasComPontosSeeder extends Seeder
         $R = 6371; // raio da Terra em km
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
-        $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
         return $R * $c;
     }
 }
