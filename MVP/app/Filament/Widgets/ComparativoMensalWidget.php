@@ -118,8 +118,8 @@ class ComparativoMensalWidget extends BaseWidget implements HasForms
         $periodos = ValorRotaMensal::query()
             ->select('mes', 'ano')
             ->distinct()
-            ->orderBy('ano', 'descricao')
-            ->orderBy('mes', 'descricao')
+            ->orderBy('ano', 'desc')
+            ->orderBy('mes', 'desc')
             ->get();
 
         $opcoes = [];
