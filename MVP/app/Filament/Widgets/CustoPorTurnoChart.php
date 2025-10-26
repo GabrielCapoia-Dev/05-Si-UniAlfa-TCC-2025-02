@@ -65,7 +65,16 @@ class CustoPorTurnoChart extends ApexChartWidget
             }
         }
 
-        $ordem = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+        $ordem = Rota::query()
+            ->whereNotNull('turno')
+            ->select('turno')
+            ->distinct()
+            ->orderByDesc('turno')
+            ->pluck('turno')
+            ->values()
+            ->all();
+
+
         $totais = Rota::query()
             ->selectRaw('turno, SUM(COALESCE(valor_total, 0)) as total')
             ->whereIn('turno', $ordem)
