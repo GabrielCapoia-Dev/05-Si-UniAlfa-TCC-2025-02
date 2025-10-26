@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use AlperenErsoy\FilamentExport\Actions\FilamentExportHeaderAction;
 use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use App\Models\Aluno;
 use App\Models\Escola;

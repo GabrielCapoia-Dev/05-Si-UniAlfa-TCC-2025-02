@@ -4,11 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Http\Controllers\ExportModeloController;
 use App\Http\Controllers\CarteirinhaPrintController;
-use App\Livewire\PasswordReset;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
+use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -83,6 +82,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
 
+                FilamentApexChartsPlugin::make(),
 
                 ActivitylogPlugin::make()
                     ->label('Registro de Atividade')
