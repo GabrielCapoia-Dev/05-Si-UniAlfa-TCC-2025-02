@@ -23,7 +23,7 @@ class ValorRotaMensalSeeder extends Seeder
         }
 
         $mapTurnoPorRota = Rota::whereIn('id', $topRotas)->pluck('turno', 'id')->all();
-        $turnosFixos = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+        $turnosFixos = ['Manhã', 'Tarde', 'Noite'];
 
         $anoAtual = (int) now()->year;
         $anos = range($anoAtual - 2, $anoAtual);
