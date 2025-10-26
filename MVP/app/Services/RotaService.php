@@ -206,7 +206,6 @@ class RotaService
                                     'Manhã' => 'Manhã',
                                     'Tarde' => 'Tarde',
                                     'Noite' => 'Noite',
-                                    'Integral' => 'Integral',
                                 ])
                                 ->required()
                                 ->columnSpan(6),

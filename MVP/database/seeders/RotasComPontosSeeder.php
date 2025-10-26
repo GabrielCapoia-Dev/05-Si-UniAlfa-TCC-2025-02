@@ -20,7 +20,7 @@ class RotasComPontosSeeder extends Seeder
     private const QTD_ROTAS = 35;
 
     // Turnos
-    private const TURNOS = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+    private const TURNOS = ['Manhã', 'Tarde', 'Noite'];
 
     // Faixa para sortear valor_por_km ao redor da média 9,75
     private const VALOR_KM_MIN = 4.50;
