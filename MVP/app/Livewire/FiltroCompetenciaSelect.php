@@ -51,19 +51,17 @@ class FiltroCompetenciaSelect extends Component implements HasForms
 
     private function opcoesCompetencias(): array
     {
-        $periodos = ValorRotaMensal::query()
+        return ValorRotaMensal::query()
             ->select('mes', 'ano')
             ->distinct()
-            ->orderBy('ano', 'desc')
-            ->orderBy('mes', 'desc')
-            ->get();
-
-        $opcoes = [];
-        foreach ($periodos as $periodo) {
-            $opcao = sprintf('%02d/%04d', (int) $periodo->mes, (int) $periodo->ano);
-            $opcoes[$opcao] = $opcao;
-        }
-        return $opcoes;
+            ->orderByDesc('ano')
+            ->orderByDesc('mes')
+            ->get()
+            ->mapWithKeys(function ($periodo) {
+                $opcao = sprintf('%02d/%04d', (int) $periodo->mes, (int) $periodo->ano);
+                return [$opcao => $opcao];
+            })
+            ->all();
     }
 
     private function valorInicial(): string
