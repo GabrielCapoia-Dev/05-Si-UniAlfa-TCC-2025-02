@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ComparativoMensalWidget;
 use App\Filament\Widgets\CustoPorTurnoChart;
+use App\Filament\Widgets\EscolasMaisCarasChart;
 use App\Filament\Widgets\FiltroMesAnoWidget;
 use App\Filament\Widgets\RotasMaisCarasChart;
 use App\Filament\Widgets\TotalValorRotasWidget;
@@ -23,7 +24,8 @@ class Dashboard extends BaseDashboard
         return [
             ComparativoMensalWidget::class,
             RotasMaisCarasChart::class,
-            CustoPorTurnoChart::class
+            CustoPorTurnoChart::class,
+            EscolasMaisCarasChart::class,
         ];
     }
 }

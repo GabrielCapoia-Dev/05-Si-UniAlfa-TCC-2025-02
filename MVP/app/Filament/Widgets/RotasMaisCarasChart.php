@@ -10,7 +10,7 @@ use Livewire\Attributes\On;
 class RotasMaisCarasChart extends ApexChartWidget
 {
     protected static ?string $chartId = 'rotasMaisCarasChart';
-    protected static ?string $heading = 'Gráfico de Rotas Mais Caras';
+    protected static ?string $heading = 'Rotas Mais Caras';
 
     /** Guarda competência selecionada por evento (sem reload) */
     public ?int $mesSelecionado = null;
@@ -21,8 +21,8 @@ class RotasMaisCarasChart extends ApexChartWidget
     {
         $this->mesSelecionado = $mes;
         $this->anoSelecionado = $ano;
-
     }
+    
     private function resolverCategoriasEValores(): array
     {
         if ($this->mesSelecionado && $this->anoSelecionado) {
