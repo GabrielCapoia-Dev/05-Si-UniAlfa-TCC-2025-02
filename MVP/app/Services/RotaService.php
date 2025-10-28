@@ -683,7 +683,7 @@ class RotaService
     }
 
     // Muda o estado do formulário antes de salvar uma rota editada.
-    public function mudarEstadoFormAntesDeSalvarEdit(array $data, array $state): array
+    public function mudarEstadoFormAntesDeSalvar(array $data, array $state): array
     {
         $this->validarComposicaoMinimaOuFalhar($state);
 

@@ -68,7 +68,7 @@ class ListRotas extends ListRecords
                     'ordem'     => (int) $p->ordem,
                     'latitude'  => (float) $p->latitude,
                     'longitude' => (float) $p->longitude,
-                    'tipo'      => $p->tipo, // 'ponto'|'escola'
+                    'tipo'      => $p->tipo,
                     'rotulo'    => $p->tipo === 'escola' ? ('Escola ' . optional($p->escola)->nome) : ('Ponto ' . (int)$p->ordem),
                 ];
             })

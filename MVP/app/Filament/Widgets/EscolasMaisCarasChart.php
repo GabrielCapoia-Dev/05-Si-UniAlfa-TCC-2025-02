@@ -193,13 +193,13 @@ class EscolasMaisCarasChart extends ApexChartWidget
     private function ordenarEFormatar(array $pares): array
     {
         usort($pares, fn($a, $b) => $b['value'] <=> $a['value']);
-        $pares = array_slice($pares, 0, 10); // Top 10
+        $pares = array_slice($pares, 0, 10);
 
         $labels = [];
         $data   = [];
         foreach ($pares as $p) {
             $labels[] = $p['name'] . ' — ' . $this->formatBRL($p['value']);
-            $data[]   = (float) $p['value'];
+            $data[]   = (float) number_format($p['value'], 2,'.');
         }
         return [$labels, $data];
     }

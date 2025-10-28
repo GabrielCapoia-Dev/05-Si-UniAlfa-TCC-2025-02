@@ -66,7 +66,7 @@ class EditRota extends EditRecord
 
         unset($data['pontos'], $data['escola_id']);
 
-        $data = app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit($data, $this->data ?? []);
+        $data = app(RotaService::class)->mudarEstadoFormAntesDeSalvar($data, $this->data ?? []);
 
         return $data;
     }

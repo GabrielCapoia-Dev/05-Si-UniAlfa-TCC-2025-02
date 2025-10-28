@@ -19,7 +19,7 @@ class CreateRota extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return app(RotaService::class)->mudarEstadoFormAntesDeSalvarEdit(
+        return app(RotaService::class)->mudarEstadoFormAntesDeSalvar(
             $data,
             $this->data ?? []
         );
