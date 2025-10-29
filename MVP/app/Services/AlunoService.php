@@ -299,6 +299,18 @@ class AlunoService
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
+            Tables\Columns\TextColumn::make('created_at')
+                ->label('Criado em')
+                ->sortable()
+                ->since()
+                ->toggleable(isToggledHiddenByDefault: true),
+
+            Tables\Columns\TextColumn::make('updated_at')
+                ->label('Atualizado em')
+                ->sortable()
+                ->since()
+                ->toggleable(isToggledHiddenByDefault: true),
+
         ];
     }
 
