@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SerieResource\Pages;
 use App\Filament\Resources\SerieResource\RelationManagers;
+use App\Http\Controllers\SerieController;
 use App\Models\Serie;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -63,14 +64,16 @@ class SerieResource extends Resource
             ->filters([])
 
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->action(fn($record, $data) => app(SerieController::class)->editarSerie($record, $data)),
+
                 Tables\Actions\DeleteAction::make()
-                    ->action(fn($record) => app(SerieService::class)->deletarSerie($record->id)),
+                    ->action(fn($record) => app(SerieController::class)->deletarSerie($record->id)),
 
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
-                    ->action(fn($records, $action) => app(SerieService::class)->deletarSerieEmMassa($records, $action)),
+                    ->action(fn($records, $action) => app(SerieController::class)->deletarSerieEmMassa($records, $action)),
 
             ]);
     }

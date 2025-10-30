@@ -1,3 +1,4 @@
+use App\Services\SerieService;
 <?php
 
 namespace App\Http\Controllers;
