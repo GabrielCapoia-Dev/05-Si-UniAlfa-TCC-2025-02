@@ -192,7 +192,6 @@ class DatabaseSeeder extends Seeder
             TurmaSeeder::class,
             AlunoSeeder::class,
             RotasComPontosSeeder::class,
-            ValorRotaMensalSeeder::class
         ]);
     }
 }
