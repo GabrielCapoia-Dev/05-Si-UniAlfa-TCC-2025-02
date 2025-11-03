@@ -27,6 +27,6 @@ class ManageTurmas extends ManageRecords
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return app(TurmaService::class)->forcarVinculoComEscola($data);
+        return app(TurmaService::class)->forcarVinculoComEscola($data, Auth::user());
     }
 }

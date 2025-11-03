@@ -226,11 +226,10 @@ class TurmaService
 
         return $query;
     }
-
-    public function forcarVinculoComEscola(array $data): array
+  public function forcarVinculoComEscola(array $data, User $auth): array
     {
 
-        $admin = app(UserService::class)->ehAdmin(Auth::user());
+        $admin = app(UserService::class)->ehAdmin($auth);
 
         if ($admin && !empty($auth->id_escola)) {
             $data['id_escola'] = $auth->id_escola;
