@@ -312,7 +312,8 @@ class AlunoResource extends Resource
     public static function table(Table $table): Table
     {
         $user = Auth::user();
-        return app(AlunoService::class)->configurarTabela($table, $user);
+        $turmaId  = request()->integer('turma');
+        return app(AlunoService::class)->configurarTabela($table, $user, $turmaId);
     }
 
     public static function getRelations(): array

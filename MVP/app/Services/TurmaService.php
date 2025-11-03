@@ -12,6 +12,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use App\Filament\Resources\TurmaResource\Pages\ManageTurmas;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\AlunoResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 
@@ -102,13 +103,8 @@ class TurmaService
                 ->label('Ver Alunos')
                 ->icon('heroicon-o-eye')
                 ->color('info')
-                ->visible(fn() => $this->podeListarAlunos($user))
-                ->url(fn($record) => route('filament.admin.resources.alunos.index', [
-                    'tableFilters' => [
-                        'id_turma' => [
-                            'value' => $record->id,
-                        ],
-                    ],
+                ->url(fn($record) => AlunoResource::getUrl('index', [
+                    'turma' => $record->id, 
                 ])),
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make()

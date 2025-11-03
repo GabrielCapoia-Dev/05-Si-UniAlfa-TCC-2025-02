@@ -16,6 +16,7 @@ class ListAlunos extends ListRecords
 {
     protected static string $resource = AlunoResource::class;
     protected static string $view = 'components.layouts.list-alunos';
+    public ?int $turmaId = null;
 
     public ?Aluno $alunoSelecionado = null;
 
@@ -24,6 +25,9 @@ class ListAlunos extends ListRecords
     public function mount(): void
     {
         parent::mount();
+
+        $turma = request()->input('turma');
+        $this->turmaId = is_numeric($turma) ? (int) $turma : null;
     }
 
     public function abrirDetalhesAluno($id): void
@@ -49,8 +53,15 @@ class ListAlunos extends ListRecords
         return app(AlunoService::class)->validarAcoesCabecario();
     }
 
+    /** Query base da tabela — aplica where por turma quando $turmaId estiver setado */
     protected function getTableQuery(): Builder
     {
-        return app(AlunoService::class)->buscarAlunosParaListagem(Auth::user());
+        $query = app(AlunoService::class)->buscarAlunosParaListagem(Auth::user());
+
+        if ($this->turmaId) {
+            $query->where('id_turma', $this->turmaId);
+        }
+
+        return $query;
     }
 }

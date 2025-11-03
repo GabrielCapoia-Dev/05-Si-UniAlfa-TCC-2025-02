@@ -34,16 +34,32 @@ class AlunoService
     }
 
     /** Configura a tabela completa (paginações, colunas, filtros, ações, ordenação). */
-    public function configurarTabela(Table $table, ?User $user): Table
+    public function configurarTabela(Table $table, ?User $user, ?int $turmaId): Table
     {
         return $table
             ->paginated([10, 25, 50, 100])
             ->columns($this->colunasTabela())
             ->filters($this->filtrosTabela($user))
+            ->headerActions($this->acoesTabelaHeader($user, $turmaId))
             ->actions($this->acoesTabela())
             ->bulkActions($this->acoesEmMassa($user))
             ->defaultSort('updated_at', 'desc')
             ->striped();
+    }
+
+    public function acoesTabelaHeader(?User $user, ?int $turmaId): array
+    {
+        $turma = Turma::find($turmaId);
+        if (!$turma) return [];
+
+        return [
+            Tables\Actions\Action::make('verTodos')
+                ->label('Ver todos')
+                ->color('gray')
+                ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => !is_null($turmaId))
+                ->url(fn() => route('filament.admin.resources.alunos.index')),
+        ];
     }
 
     /** Desabilita o select de escola para usuário vinculado a uma escola (não-Admin). */
@@ -109,7 +125,7 @@ class AlunoService
     public function buscarAlunosParaListagem(?User $user): Builder
     {
         $query = app(ListAlunos::class)->getResource()::getEloquentQuery()
-            ->with(['turma.escola', 'turma.serie']); 
+            ->with(['turma.escola', 'turma.serie']);
 
         if ($user && (!$user->hasRole('Admin')) && !empty($user->id_escola)) {
             $query->whereHas('turma', function (Builder $t) use ($user) {
@@ -144,7 +160,7 @@ class AlunoService
             return $actions;
         }
 
-        if ( $hasEscolas && !$hasTurmas) {
+        if ($hasEscolas && !$hasTurmas) {
             $actions[] = Actions\Action::make('Cadastrar Turmas')
                 ->button()
                 ->color('danger')
@@ -364,22 +380,6 @@ class AlunoService
         ];
     }
 
-    /** Opções de turma para filtro. */
-    private function opcoesTurmaFiltro(): array
-    {
-
-        $idEscola = Auth::user()?->id_escola;
-        if (!$idEscola) return [];
-
-        return Turma::with('serie')
-            ->where('id_escola', $idEscola)
-            ->get()
-            ->filter(fn($t) => $t->serie)
-            ->mapWithKeys(fn($t) => [
-                $t->id => "{$t->serie->nome} - {$t->turma}",
-            ])
-            ->toArray();
-    }
 
     /** Ações da tabela. */
     private function acoesTabela(): array
