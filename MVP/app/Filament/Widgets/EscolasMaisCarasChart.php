@@ -2,26 +2,16 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Escola;
 use App\Models\Rota;
-use App\Models\ValorRotaMensal;
 use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
-use Livewire\Attributes\On;
 
 class EscolasMaisCarasChart extends ApexChartWidget
 {
     protected static ?string $chartId = 'escolasMaisCarasChart';
-    protected static ?string $heading = 'Escolas Mais Caras';
+    protected static ?string $heading = 'Escolas Mais Caras (Tempo Real)';
+    protected static ?int $sort = 3;
 
-    public ?int $mesSelecionado = null;
-    public ?int $anoSelecionado = null;
-
-    #[On('competencia-atualizada')]
-    public function onCompetenciaAtualizada(int $mes, int $ano): void
-    {
-        $this->mesSelecionado = $mes;
-        $this->anoSelecionado = $ano;
-    }
+    protected static ?string $pollingInterval = '30s';
 
     protected function getOptions(): array
     {
@@ -63,104 +53,11 @@ class EscolasMaisCarasChart extends ApexChartWidget
 
     private function resolverCategoriasEValores(): array
     {
-        if ($this->mesSelecionado && $this->anoSelecionado) {
-            $pares = $this->paresPorEscolaDoSnapshot($this->mesSelecionado, $this->anoSelecionado);
-            if (!empty($pares)) {
-                return $this->ordenarEFormatar($pares);
-            }
-        }
-
-        // 2) via ?mes_ano
-        $mesAno = request()->string('mes_ano')->toString();
-        if ($mesAno && preg_match('/^(\d{2})\/(\d{4})$/', $mesAno, $m)) {
-            $pares = $this->paresPorEscolaDoSnapshot((int) $m[1], (int) $m[2]);
-            if (!empty($pares)) {
-                return $this->ordenarEFormatar($pares);
-            }
-        }
-
-        // 3) via ?mes=&ano=
-        $mes = request()->integer('mes');
-        $ano = request()->integer('ano');
-        if ($mes && $ano) {
-            $pares = $this->paresPorEscolaDoSnapshot($mes, $ano);
-            if (!empty($pares)) {
-                return $this->ordenarEFormatar($pares);
-            }
-        }
-
-        return $this->ordenarEFormatar($this->paresPorEscolaDoEstadoAtual());
-    }
-
-    /**
-     * Snapshot do mês: usa valor_total_por_rota e reparte por escola da rota.
-     * Retorna lista de pares ['name'=>nome_escola, 'value'=>total_estimado]
-     */
-    private function paresPorEscolaDoSnapshot(int $mes, int $ano): array
-    {
-        $snap = ValorRotaMensal::where('mes', $mes)->where('ano', $ano)->first();
-        if (!$snap || !is_array($snap->valor_total_por_rota) || empty($snap->valor_total_por_rota)) {
-            return [];
-        }
-
-        $valorTotalRota = $snap->valor_total_por_rota;
-        $rotaIds = array_column($valorTotalRota, 'rota_id');
-        $valores = array_map('floatval', array_column($valorTotalRota, 'valor_total'));
-
         $rotas = Rota::with(['escolas:id,nome'])
-            ->whereIn('id', $rotaIds)
-            ->get(['id']);
-
-        $mapEscolasPorRota = [];
-        $todasEscolaIds = [];
-        foreach ($rotas as $rota) {
-            $ids = $rota->escolas->pluck('id')->all();
-            $mapEscolasPorRota[$rota->id] = $ids;
-            $todasEscolaIds = array_merge($todasEscolaIds, $ids);
-        }
-
-        if (empty($todasEscolaIds)) {
-            return [];
-        }
-
-        $nomesEscolas = Escola::whereIn('id', array_unique($todasEscolaIds))
-            ->pluck('nome', 'id')
-            ->all();
-
-        $acum = [];
-        foreach ($rotaIds as $i => $rotaId) {
-            $valorRota = $valores[$i] ?? 0.0;
-            $escolasDaRota = $mapEscolasPorRota[$rotaId] ?? [];
-            $qtd = count($escolasDaRota);
-            if ($qtd <= 0) {
-                continue;
-            }
-            $quota = $valorRota / $qtd;
-            foreach ($escolasDaRota as $eid) {
-                $acum[$eid] = ($acum[$eid] ?? 0) + $quota;
-            }
-        }
-
-        $pares = [];
-        foreach ($acum as $eid => $tot) {
-            $pares[] = [
-                'name'  => (string) ($nomesEscolas[$eid] ?? "Escola #$eid"),
-                'value' => (float) $tot,
-            ];
-        }
-
-        return $pares;
-    }
-
-    /**
-     * Estado atual: usa todas as rotas com valor_total atual e reparte por escola.
-     */
-    private function paresPorEscolaDoEstadoAtual(): array
-    {
-        $rotas = Rota::with(['escolas:id,nome'])
+            ->whereHas('escolas')
             ->get(['id', 'valor_total']);
 
-        $acum = []; // escola_id => total
+        $acum = [];
         $nomes = [];
 
         foreach ($rotas as $rota) {
@@ -173,6 +70,7 @@ class EscolasMaisCarasChart extends ApexChartWidget
             if ($qtd <= 0) {
                 continue;
             }
+            
             $quota = $valor / $qtd;
             foreach ($ids as $eid) {
                 $acum[$eid] = ($acum[$eid] ?? 0) + $quota;
@@ -186,10 +84,10 @@ class EscolasMaisCarasChart extends ApexChartWidget
                 'value' => (float) $tot,
             ];
         }
-        return $pares;
+
+        return $this->ordenarEFormatar($pares);
     }
 
-    /** Ordena desc por value e formata BRL nos labels */
     private function ordenarEFormatar(array $pares): array
     {
         usort($pares, fn($a, $b) => $b['value'] <=> $a['value']);
@@ -199,7 +97,7 @@ class EscolasMaisCarasChart extends ApexChartWidget
         $data   = [];
         foreach ($pares as $p) {
             $labels[] = $p['name'] . ' — ' . $this->formatBRL($p['value']);
-            $data[]   = (float) number_format($p['value'], 2,'.');
+            $data[]   = (float) number_format($p['value'], 2, '.');
         }
         return [$labels, $data];
     }

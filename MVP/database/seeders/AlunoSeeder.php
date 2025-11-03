@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Aluno;
 use App\Models\Turma;
+use App\Models\Rota;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -107,12 +108,15 @@ class AlunoSeeder extends Seeder
         $cgmsUsados = Aluno::pluck('cgm')->all();
         $cgmsIndex  = array_flip($cgmsUsados);
 
-        // Carrega todas as turmas com suas séries (p/ idade)
-        $turmas = Turma::with('serie', 'escola')->get();
+        // Carrega todas as turmas com suas séries e escola
+        $turmas = Turma::with(['serie', 'escola.rotas'])->get();
 
         foreach ($turmas as $turma) {
             $qtd = rand(1, 4);
 
+            // Buscar rotas disponíveis para a escola dessa turma
+            $rotasDisponiveis = $turma->escola->rotas ?? collect();
+            
             for ($i = 0; $i < $qtd; $i++) {
 
                 [$nome, $sexo] = $this->gerarNomeCompleto($primeiros, $meios, $sobrenomes);
@@ -131,14 +135,23 @@ class AlunoSeeder extends Seeder
                 $telAluno = rand(0, 1) ? $this->telefoneMovel() : null;
                 $telAlt   = rand(0, 1) ? $this->telefoneFixo()  : null;
 
+                // Definir rota (80% dos alunos têm rota, 20% ficam sem)
+                $temRota = rand(1, 100) <= 80;
+                $rotaId = null;
+                
+                if ($temRota && $rotasDisponiveis->isNotEmpty()) {
+                    // Seleciona uma rota aleatória da escola
+                    $rotaId = $rotasDisponiveis->random()->id;
+                }
+
                 Aluno::create([
                     'id_turma'            => $turma->id,
-                    'id_rota'             => null, // se quiser, dá pra associar futuramente via escola->rotas
+                    'id_rota'             => $rotaId, // Associado com rota da escola (80% chance)
                     'nome'                => $nome,
                     'data_nascimento'     => $dataNasc,
                     'cgm'                 => $cgm,
                     'sexo'                => $sexo,
-                    'foto'                => null, // opcional
+                    'foto'                => null,
                     'nome_responsavel'    => $this->nomeResponsavel($primeiros, $sobrenomes),
                     'telefone_responsavel' => $telResp,
                     'telefone_aluno'      => $telAluno,
@@ -151,9 +164,9 @@ class AlunoSeeder extends Seeder
                     'bairro'              => $bairro,
                     'cidade'              => 'Umuarama',
                     'estado'              => 'PR',
-                    'cep'                 => $cep, // sem hífen (sua migration espera até 8 chars)
+                    'cep'                 => $cep,
                     'complemento'         => rand(0, 1) ? 'Próx. à escola' : null,
-                    'tem_carteirinha'     => (bool) rand(0, 1), // ou deixe default false se preferir
+                    'tem_carteirinha'     => (bool) rand(0, 1),
                 ]);
             }
         }
