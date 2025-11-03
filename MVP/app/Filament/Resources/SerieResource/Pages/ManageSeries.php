@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SerieResource\Pages;
 
 use App\Filament\Resources\SerieResource;
+use App\Http\Controllers\SerieController;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
 
@@ -15,7 +16,10 @@ class ManageSeries extends ManageRecords
     {
         return [
 
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->action(function ($data) {
+                    app(SerieController::class)->criarSerie($data);
+                }),
 
         ];
     }

@@ -39,11 +39,10 @@ class AlunoResource extends Resource
                             ->required()
                             ->minLength(3)
                             ->maxLength(100)
-                            ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                            ->rule('regex:/^(?!.*  )(?! )[A-Za-zÀ-ÖØ-öø-ÿ]+(?: [A-Za-zÀ-ÖØ-öø-ÿ]+)*(?<! )$/u')
                             ->validationMessages([
-                                'regex' => 'Use apenas letras, sem caracteres especiais.',
+                                'regex' => 'Use apenas letras e um espaço simples entre nomes, sem números ou caracteres especiais.',
                             ]),
-
 
                         Forms\Components\DatePicker::make('data_nascimento')
                             ->label('Data de Nascimento:')
@@ -137,9 +136,9 @@ class AlunoResource extends Resource
                                             ->required()
                                             ->maxLength(100)
                                             ->minLength(3)
-                                            ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
+                                            ->rule('regex:/^(?!.*  )(?! )[A-Za-zÀ-ÖØ-öø-ÿ]+(?: [A-Za-zÀ-ÖØ-öø-ÿ]+)*(?<! )$/u')
                                             ->validationMessages([
-                                                'regex' => 'Use apenas letras, sem caracteres especiais.',
+                                                'regex' => 'Use apenas letras e um espaço simples entre nomes, sem números ou caracteres especiais.',
                                             ]),
 
                                         Forms\Components\TextInput::make('telefone_responsavel')

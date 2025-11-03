@@ -16,6 +16,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Filament\Notifications\Notification;
 use App\Models\Escola;
+use App\Models\Rota;
 
 class RotaService
 {
@@ -721,5 +722,10 @@ class RotaService
         }
 
         return is_numeric($s) ? (float) $s : 0.0;
+    }
+
+    public function cadastrar(array $data): Rota
+    {
+        return Rota::create($data);
     }
 }
