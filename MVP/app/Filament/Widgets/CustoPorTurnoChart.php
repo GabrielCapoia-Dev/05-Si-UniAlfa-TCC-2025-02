@@ -8,7 +8,7 @@ use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 class CustoPorTurnoChart extends ApexChartWidget
 {
     protected static ?string $chartId = 'custoPorTurnoChart';
-    protected static ?string $heading = 'Custo por Turno (Tempo Real)';
+    protected static ?string $heading = 'Custo por Turno';
     protected static ?int $sort = 2;
 
     protected static ?string $pollingInterval = '30s';
@@ -57,7 +57,7 @@ class CustoPorTurnoChart extends ApexChartWidget
 
     private function completarTurnos(array $map): array
     {
-        foreach (['Manhã', 'Tarde', 'Noite', 'Integral'] as $t) {
+        foreach (['Manhã', 'Tarde', 'Noite'] as $t) {
             $map[$t] = (float) ($map[$t] ?? 0);
         }
         return $map;
@@ -69,7 +69,6 @@ class CustoPorTurnoChart extends ApexChartWidget
             'Manhã'    => '#22C55E',
             'Tarde'    => '#1E87CE',
             'Noite'    => '#A3BE28',
-            'Integral' => '#CA401D',
         ];
 
         $rows = [];

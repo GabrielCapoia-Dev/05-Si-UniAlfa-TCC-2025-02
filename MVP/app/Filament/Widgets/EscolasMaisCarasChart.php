@@ -8,7 +8,7 @@ use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 class EscolasMaisCarasChart extends ApexChartWidget
 {
     protected static ?string $chartId = 'escolasMaisCarasChart';
-    protected static ?string $heading = 'Escolas Mais Caras (Tempo Real)';
+    protected static ?string $heading = 'Escolas Mais Caras';
     protected static ?int $sort = 3;
 
     protected static ?string $pollingInterval = '30s';

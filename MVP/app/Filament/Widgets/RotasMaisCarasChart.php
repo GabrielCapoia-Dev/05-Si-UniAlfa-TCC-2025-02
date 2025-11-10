@@ -8,7 +8,7 @@ use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 class RotasMaisCarasChart extends ApexChartWidget
 {
     protected static ?string $chartId = 'rotasMaisCarasChart';
-    protected static ?string $heading = 'Rotas Mais Caras (Tempo Real)';
+    protected static ?string $heading = 'Rotas Mais Caras';
     protected static ?int $sort = 4;
 
     protected static ?string $pollingInterval = '30s';
