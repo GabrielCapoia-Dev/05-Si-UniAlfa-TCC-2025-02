@@ -348,6 +348,7 @@ class AlunoService
                 ->label('Escola')
                 ->relationship('turma.escola', 'nome')
                 ->visible(fn() => app(UserService::class)->ehAdmin($user))
+                ->preload()
                 ->searchable(),
 
 
@@ -405,6 +406,7 @@ class AlunoService
 
             Tables\Actions\Action::make('definirRotaTransporte')
                 ->label('Definir Rota')
+                ->color('warning')
                 ->icon('heroicon-o-map-pin')
                 ->modalHeading('Selecione a rota de transporte')
                 ->visible(function (Aluno $record) {
@@ -494,6 +496,188 @@ class AlunoService
                 ])
                 ->directDownload(),
 
+            // =========================
+            // VINCULAR ROTA (massa)
+            // =========================
+            BulkAction::make('vincular_rota_transporte')
+                ->label('Vincular à rota')
+                ->icon('heroicon-o-map-pin')
+                ->color('success')
+                ->visible(fn() => app(UserService::class)->ehAdmin(Auth::user()))
+                ->requiresConfirmation()
+                ->modalHeading('Vincular alunos selecionados a uma rota')
+                ->form(function (ListAlunos $livewire): array {
+                    $registros = $livewire->getSelectedTableRecords();
+
+                    // Descobre escolas distintas dos selecionados
+                    $escolas = $registros
+                        ->map(fn(Aluno $aluno) => $aluno->turma?->id_escola)
+                        ->filter()
+                        ->unique();
+
+                    // Se não tiver exatamente 1 escola, deixa sem opções (action vai barrar)
+                    $escolaId = $escolas->count() === 1 ? $escolas->first() : null;
+
+                    return [
+                        Forms\Components\Select::make('id_rota')
+                            ->label('Rota de transporte')
+                            ->options(function () use ($escolaId) {
+                                if (! $escolaId) {
+                                    return [];
+                                }
+
+                                return Rota::query()
+                                    ->whereHas('escolas', fn(Builder $q) => $q->where('escolas.id', $escolaId))
+                                    ->orderBy('nome')
+                                    ->pluck('nome', 'id')
+                                    ->toArray();
+                            })
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Serão exibidas apenas rotas vinculadas à escola comum dos alunos selecionados.'),
+                    ];
+                })
+                ->action(function (array $data, Collection $records) {
+                    if (! app(UserService::class)->ehAdmin(Auth::user())) {
+                        Notification::make()
+                            ->title('Acesso negado')
+                            ->body('Apenas administradores podem vincular alunos a rotas.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    if ($records->isEmpty()) {
+                        Notification::make()
+                            ->title('Nenhum aluno selecionado')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    // Todos sem rota e sem carteirinha
+                    $todosElegiveis = $records->every(
+                        fn(Aluno $aluno) =>
+                        empty($aluno->id_rota) && (bool) $aluno->tem_carteirinha === false
+                    );
+
+                    if (! $todosElegiveis) {
+                        Notification::make()
+                            ->title('Seleção inválida')
+                            ->body('Para vincular em massa, todos os alunos selecionados devem estar sem rota e sem carteirinha.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    // Todos da mesma escola
+                    $escolas = $records
+                        ->map(fn(Aluno $aluno) => $aluno->turma?->id_escola)
+                        ->filter()
+                        ->unique();
+
+                    if ($escolas->count() !== 1) {
+                        Notification::make()
+                            ->title('Seleção inválida')
+                            ->body('Todos os alunos selecionados devem pertencer à mesma escola para vincular à mesma rota.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $idRota = $data['id_rota'] ?? null;
+
+                    if (! $idRota) {
+                        Notification::make()
+                            ->title('Nenhuma rota selecionada')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $quantidade = 0;
+
+                    foreach ($records as $aluno) {
+                        /** @var Aluno $aluno */
+                        $aluno->update([
+                            'id_rota'         => $idRota,
+                            'tem_carteirinha' => true,
+                        ]);
+                        $quantidade++;
+                    }
+
+                    Notification::make()
+                        ->title('Rota vinculada com sucesso')
+                        ->body("{$quantidade} aluno(s) foram vinculados à rota selecionada.")
+                        ->success()
+                        ->send();
+                }),
+
+            // =========================
+            // DESVINCULAR ROTA (massa)
+            // =========================
+            BulkAction::make('desvincular_rota_transporte')
+                ->label('Desvincular da rota')
+                ->icon('heroicon-o-x-mark')
+                ->color('danger')
+                ->visible(fn() => app(UserService::class)->ehAdmin(Auth::user()))
+                ->requiresConfirmation()
+                ->modalHeading('Desvincular alunos da rota de transporte?')
+                ->action(function (Collection $records) {
+                    if (! app(UserService::class)->ehAdmin(Auth::user())) {
+                        Notification::make()
+                            ->title('Acesso negado')
+                            ->body('Apenas administradores podem desvincular alunos de rotas.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    if ($records->isEmpty()) {
+                        Notification::make()
+                            ->title('Nenhum aluno selecionado')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    // Todos precisam ter rota + carteirinha
+                    $todosElegiveis = $records->every(
+                        fn(Aluno $aluno) =>
+                        ! empty($aluno->id_rota) && (bool) $aluno->tem_carteirinha === true
+                    );
+
+                    if (! $todosElegiveis) {
+                        Notification::make()
+                            ->title('Seleção inválida')
+                            ->body('Para desvincular em massa, todos os alunos selecionados devem estar vinculados a uma rota.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    $quantidade = 0;
+
+                    foreach ($records as $aluno) {
+                        /** @var Aluno $aluno */
+                        $aluno->update([
+                            'id_rota'         => null,
+                            'tem_carteirinha' => false,
+                        ]);
+                        $quantidade++;
+                    }
+
+                    Notification::make()
+                        ->title('Desvinculação concluída')
+                        ->body("{$quantidade} aluno(s) foram desvinculados das rotas.")
+                        ->success()
+                        ->send();
+                }),
+
+            // =========================
+            // IMPRIMIR CARTEIRINHAS
+            // =========================
             BulkAction::make('exportar_carteirinhas_html')
                 ->label('Imprimir Carteirinhas')
                 ->color('info')
@@ -537,6 +721,8 @@ class AlunoService
                 }),
         ];
     }
+
+
 
     /** Opções de séries (para filtros). */
     public function opcoesSeries(): array

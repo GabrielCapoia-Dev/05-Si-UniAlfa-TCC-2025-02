@@ -17,6 +17,9 @@ use Illuminate\Support\Facades\DB;
 use Filament\Notifications\Notification;
 use App\Models\Escola;
 use App\Models\Rota;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Forms\Components\TextInput;
 
 class RotaService
 {
@@ -132,11 +135,39 @@ class RotaService
         ];
     }
 
-    //** Retorna os filtros da tabela */
-    private function filtrosTabela($record): array
+    /** Retorna os filtros da tabela */
+    private function filtrosTabela(?User $user): array
     {
         return [
-            Tables\Filters\SelectFilter::make('turno')
+            // Filtrar por Escola vinculada à rota
+            SelectFilter::make('escolas')
+                ->label('Escola')
+                ->options(
+                    Escola::query()
+                        ->orderBy('nome')
+                        ->pluck('nome', 'id')
+                        ->toArray()
+                )
+                ->searchable()
+                ->preload()
+                ->multiple()
+                ->query(function (Builder $query, array $data): void {
+                    $idsEscolas = $data['values'] ?? $data['value'] ?? null;
+
+                    if (blank($idsEscolas)) {
+                        return;
+                    }
+
+                    $idsEscolas = (array) $idsEscolas;
+
+                    $query->whereHas('escolas', function (Builder $subQuery) use ($idsEscolas) {
+                        $subQuery->whereIn('escolas.id', $idsEscolas);
+                    });
+                }),
+
+            // Filtrar por turno
+            SelectFilter::make('turno')
+                ->label('Turno')
                 ->options([
                     'Manhã' => 'Manhã',
                     'Tarde' => 'Tarde',
@@ -144,6 +175,7 @@ class RotaService
                 ]),
         ];
     }
+
 
     //** Retorna as acoes da tabela */
     private function acoesTabela($record): array
