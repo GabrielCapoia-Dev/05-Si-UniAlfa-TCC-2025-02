@@ -15,82 +15,102 @@ class CustoPorTurnoChart extends ApexChartWidget
 
     protected function getOptions(): array
     {
-        [$labels, $series, $colors] = $this->resolverSeriesLabelsECores();
+        [$rotulos, $series, $cores] = $this->resolverSeriesRotulosECores();
 
         return [
-            'chart'   => [
-                'type' => 'pie', 
-                'height' => 300, 
-                'toolbar' => ['show' => false]
+            'chart' => [
+                'type' => 'pie',
+                'height' => 300,
+                'toolbar' => ['show' => false],
             ],
-            'labels'  => $labels,
-            'series'  => $series,
-            'colors'  => $colors,
-            'legend'  => ['position' => 'bottom'],
+            'labels' => $rotulos,
+            'series' => $series,
+            'colors' => $cores,
+            'legend' => ['position' => 'bottom'],
             'dataLabels' => ['enabled' => false],
             'tooltip' => ['enabled' => false],
-            'stroke'  => ['show' => true, 'colors' => ['#FFFFFF']],
-            'noData'  => ['text' => 'Sem dados para exibir'],
+            'stroke' => [
+                'show' => true,
+                'colors' => ['#FFFFFF'],
+            ],
+            'noData' => [
+                'text' => 'Sem dados para exibir',
+            ],
         ];
     }
 
-    private function resolverSeriesLabelsECores(): array
+    private function resolverSeriesRotulosECores(): array
     {
-        $totais = Rota::query()
+        $totaisPorTurno = Rota::query()
             ->selectRaw('turno, SUM(COALESCE(valor_total, 0)) as total')
             ->whereNotNull('turno')
             ->groupBy('turno')
             ->get();
 
-        $map = [];
-        foreach ($totais as $item) {
-            $turno = (string) $item->turno;
+        $valoresPorTurno = [];
+
+        foreach ($totaisPorTurno as $registroTurno) {
+            $turno = (string) $registroTurno->turno;
+
             if ($turno !== '') {
-                $map[$turno] = (float) $item->total;
+                $valoresPorTurno[$turno] = (float) $registroTurno->total;
             }
         }
 
-        $map = $this->completarTurnos($map);
+        $valoresPorTurno = $this->garantirTurnosPadrao($valoresPorTurno);
 
-        return $this->ordenarFormatarEColorir($map);
+        return $this->ordenarFormatarEAplicarCores($valoresPorTurno);
     }
 
-    private function completarTurnos(array $map): array
+    private function garantirTurnosPadrao(array $valoresPorTurno): array
     {
-        foreach (['Manhã', 'Tarde', 'Noite'] as $t) {
-            $map[$t] = (float) ($map[$t] ?? 0);
+        $turnosPadrao = ['Manhã', 'Tarde', 'Noite'];
+
+        foreach ($turnosPadrao as $turno) {
+            $valoresPorTurno[$turno] = (float) ($valoresPorTurno[$turno] ?? 0);
         }
-        return $map;
+
+        return $valoresPorTurno;
     }
 
-    private function ordenarFormatarEColorir(array $map): array
+    private function ordenarFormatarEAplicarCores(array $valoresPorTurno): array
     {
         $coresPorTurno = [
-            'Manhã'    => '#22C55E',
-            'Tarde'    => '#1E87CE',
-            'Noite'    => '#A3BE28',
+            'Manhã' => '#22C55E',
+            'Tarde' => '#1E87CE',
+            'Noite' => '#A3BE28',
         ];
 
-        $rows = [];
-        foreach ($map as $turno => $valor) {
-            $rows[] = ['turno' => $turno, 'valor' => (float) $valor];
-        }
-        usort($rows, fn($a, $b) => $b['valor'] <=> $a['valor']);
+        $linhasOrdenadas = [];
 
-        $labels = [];
-        $series = [];
-        $colors = [];
-        foreach ($rows as $r) {
-            $labels[] = $r['turno'] . ' — ' . $this->formatBRL($r['valor']);
-            $series[] = $r['valor'];
-            $colors[] = $coresPorTurno[$r['turno']] ?? '#22C55E';
+        foreach ($valoresPorTurno as $turno => $valorTotal) {
+            $linhasOrdenadas[] = [
+                'turno' => $turno,
+                'valor' => (float) $valorTotal,
+            ];
         }
 
-        return [$labels, $series, $colors];
+        usort(
+            $linhasOrdenadas,
+            fn (array $linhaTurnoA, array $linhaTurnoB) =>
+                $linhaTurnoB['valor'] <=> $linhaTurnoA['valor']
+        );
+
+        $rotulos = [];
+        $series  = [];
+        $cores   = [];
+
+        foreach ($linhasOrdenadas as $linhaTurno) {
+            $rotulos[] = $linhaTurno['turno'] . ' — ' . $this->formatarBRL($linhaTurno['valor']);
+            $series[]  = $linhaTurno['valor'];
+            $cores[]   = $coresPorTurno[$linhaTurno['turno']] ?? '#22C55E';
+        }
+
+        return [$rotulos, $series, $cores];
     }
 
-    private function formatBRL(float $v): string
+    private function formatarBRL(float $valor): string
     {
-        return 'R$ ' . number_format($v, 2, ',', '.');
+        return 'R$ ' . number_format($valor, 2, ',', '.');
     }
 }

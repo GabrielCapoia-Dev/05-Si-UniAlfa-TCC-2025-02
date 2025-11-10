@@ -39,9 +39,9 @@ class AlunoResource extends Resource
                             ->required()
                             ->minLength(3)
                             ->maxLength(100)
-                            ->rule('regex:/^(?!.*  )(?! )[A-Za-zÀ-ÖØ-öø-ÿ]+(?: [A-Za-zÀ-ÖØ-öø-ÿ]+)*(?<! )$/u')
+                            ->rule('regex:/^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u')
                             ->validationMessages([
-                                'regex' => 'Use apenas letras e um espaço simples entre nomes, sem números ou caracteres especiais.',
+                                'regex' => 'Use apenas letras, sem caracteres especiais.',
                             ]),
 
                         Forms\Components\DatePicker::make('data_nascimento')
@@ -104,21 +104,24 @@ class AlunoResource extends Resource
                                             ->helperText('Lista apenas rotas vinculadas à escola da turma selecionada.')
                                             ->searchable()
                                             ->columnSpanFull()
-                                            ->preload(),
+                                            ->preload()
+                                            ->reactive()
+                                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                                $set('tem_carteirinha', filled($state));
+                                            }),
 
                                         Forms\Components\Toggle::make('tem_carteirinha')
                                             ->label('Usa o Transporte?')
                                             ->default(false)
                                             ->columnSpanFull()
-                                            ->visible(function () {
-                                                $user = Auth::user();
-                                                return (app(AlunoService::class)->podeVerToggleCarteirinha($user));
-                                            })
+                                            ->visible(fn() => app(UserService::class)->ehAdmin())
                                             ->inline(false)
                                             ->onColor('success')
                                             ->offColor('danger')
                                             ->onIcon('heroicon-s-check')
-                                            ->offIcon('heroicon-s-x-mark'),
+                                            ->offIcon('heroicon-s-x-mark')
+                                            ->disabled()
+                                            ->dehydrated(true),
                                     ])
                                     ->visible(fn() => app(UserService::class)->ehAdmin()),
                             ])
@@ -136,9 +139,9 @@ class AlunoResource extends Resource
                                             ->required()
                                             ->maxLength(100)
                                             ->minLength(3)
-                                            ->rule('regex:/^(?!.*  )(?! )[A-Za-zÀ-ÖØ-öø-ÿ]+(?: [A-Za-zÀ-ÖØ-öø-ÿ]+)*(?<! )$/u')
+                                            ->rule('regex:/^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u')
                                             ->validationMessages([
-                                                'regex' => 'Use apenas letras e um espaço simples entre nomes, sem números ou caracteres especiais.',
+                                                'regex' => 'Use apenas letras, sem caracteres especiais.',
                                             ]),
 
                                         Forms\Components\TextInput::make('telefone_responsavel')

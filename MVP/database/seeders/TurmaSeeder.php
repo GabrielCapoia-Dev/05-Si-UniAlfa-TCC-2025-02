@@ -66,7 +66,7 @@ class TurmaSeeder extends Seeder
                 }
 
                 // Quantidade de turmas por série (A, B, C aleatório)
-                $qtdTurmas = rand(1, 3);
+                $qtdTurmas = rand(1, 2);
                 $secoes = array_slice(['A', 'B', 'C'], 0, $qtdTurmas);
 
                 foreach ($secoes as $secao) {

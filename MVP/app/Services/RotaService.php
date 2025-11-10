@@ -63,7 +63,6 @@ class RotaService
                     'success' => 'Manhã',
                     'warning' => 'Tarde',
                     'info'    => 'Noite',
-                    'primary' => 'Integral',
                 ])
                 ->sortable(),
 
@@ -142,7 +141,6 @@ class RotaService
                     'Manhã' => 'Manhã',
                     'Tarde' => 'Tarde',
                     'Noite' => 'Noite',
-                    'Integral' => 'Integral',
                 ]),
         ];
     }
@@ -159,7 +157,18 @@ class RotaService
                     $livewire->dispatch('abrirDetalhesRota', $record->id);
                 }),
             Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
+            Tables\Actions\DeleteAction::make()
+                ->before(function ($record, $action) {
+                    if ($record->alunos()->exists()) {
+                        Notification::make()
+                            ->title('Não é possível excluir esta rota.')
+                            ->body('Existem alunos vinculados a ela.')
+                            ->danger()
+                            ->send();
+
+                        $action->cancel();
+                    }
+                }),
         ];
     }
 
@@ -167,7 +176,21 @@ class RotaService
     private function acoesEmMassa($record): array
     {
         return [
-            Tables\Actions\DeleteBulkAction::make(),
+            Tables\Actions\DeleteBulkAction::make()
+                ->before(function ($records, $action) {
+
+                    foreach ($records as $record) {
+                        if ($record->alunos()->exists()) {
+                            Notification::make()
+                                ->title('Ação cancelada.')
+                                ->body('Não é possivel excluir rota com alunos vinculados.')
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
+                    }
+                }),
         ];
     }
 
@@ -199,6 +222,7 @@ class RotaService
                         ->schema([
                             Forms\Components\TextInput::make('nome')
                                 ->required()
+                                ->unique(ignoreRecord: true)
                                 ->maxLength(255)
                                 ->columnSpan(6),
 

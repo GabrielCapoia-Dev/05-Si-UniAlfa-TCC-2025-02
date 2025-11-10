@@ -15,7 +15,7 @@ class RotasMaisCarasChart extends ApexChartWidget
 
     protected function getOptions(): array
     {
-        [$labels, $data] = $this->resolverCategoriasEValores();
+        [$rotulos, $valores] = $this->resolverCategoriasEValores();
 
         return [
             'chart' => [
@@ -26,7 +26,7 @@ class RotasMaisCarasChart extends ApexChartWidget
             'series' => [
                 [
                     'name' => 'Valor da Rota',
-                    'data' => $data,
+                    'data' => $valores,
                 ],
             ],
             'plotOptions' => [
@@ -38,11 +38,15 @@ class RotasMaisCarasChart extends ApexChartWidget
                 ],
             ],
             'xaxis' => [
-                'categories' => $labels,
-                'labels' => ['style' => ['fontFamily' => 'inherit']],
+                'categories' => $rotulos,
+                'labels' => [
+                    'style' => ['fontFamily' => 'inherit'],
+                ],
             ],
             'yaxis' => [
-                'labels' => ['style' => ['fontFamily' => 'inherit']],
+                'labels' => [
+                    'style' => ['fontFamily' => 'inherit'],
+                ],
             ],
             'colors' => ['#22C55E'],
             'tooltip' => ['enabled' => false],
@@ -51,19 +55,19 @@ class RotasMaisCarasChart extends ApexChartWidget
 
     private function resolverCategoriasEValores(): array
     {
-        $rotas = Rota::query()
+        $rotasMaisCaras = Rota::query()
             ->orderByDesc('valor_total')
             ->limit(10)
             ->get(['nome', 'valor_total']);
 
-        $labels = [];
-        $data   = [];
-        
-        foreach ($rotas as $rota) {
-            $labels[] = $rota->nome;
-            $data[]   = (float) $rota->valor_total;
+        $rotulos = [];
+        $valores = [];
+
+        foreach ($rotasMaisCaras as $rota) {
+            $rotulos[] = $rota->nome;
+            $valores[] = (float) $rota->valor_total;
         }
 
-        return [$labels, $data];
+        return [$rotulos, $valores];
     }
 }

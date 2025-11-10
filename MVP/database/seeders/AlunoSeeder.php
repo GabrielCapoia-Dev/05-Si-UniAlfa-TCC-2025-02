@@ -116,7 +116,7 @@ class AlunoSeeder extends Seeder
 
             // Buscar rotas disponíveis para a escola dessa turma
             $rotasDisponiveis = $turma->escola->rotas ?? collect();
-            
+
             for ($i = 0; $i < $qtd; $i++) {
 
                 [$nome, $sexo] = $this->gerarNomeCompleto($primeiros, $meios, $sobrenomes);
@@ -138,35 +138,35 @@ class AlunoSeeder extends Seeder
                 // Definir rota (80% dos alunos têm rota, 20% ficam sem)
                 $temRota = rand(1, 100) <= 80;
                 $rotaId = null;
-                
+
                 if ($temRota && $rotasDisponiveis->isNotEmpty()) {
                     // Seleciona uma rota aleatória da escola
                     $rotaId = $rotasDisponiveis->random()->id;
                 }
 
                 Aluno::create([
-                    'id_turma'            => $turma->id,
-                    'id_rota'             => $rotaId, // Associado com rota da escola (80% chance)
-                    'nome'                => $nome,
-                    'data_nascimento'     => $dataNasc,
-                    'cgm'                 => $cgm,
-                    'sexo'                => $sexo,
-                    'foto'                => null,
-                    'nome_responsavel'    => $this->nomeResponsavel($primeiros, $sobrenomes),
+                    'id_turma'             => $turma->id,
+                    'id_rota'              => $rotaId, // Associado com rota da escola (80% chance)
+                    'nome'                 => $nome,
+                    'data_nascimento'      => $dataNasc,
+                    'cgm'                  => $cgm,
+                    'sexo'                 => $sexo,
+                    'foto'                 => null,
+                    'nome_responsavel'     => $this->nomeResponsavel($primeiros, $sobrenomes),
                     'telefone_responsavel' => $telResp,
-                    'telefone_aluno'      => $telAluno,
+                    'telefone_aluno'       => $telAluno,
                     'telefone_alternativo' => $telAlt,
-                    'latitude'            => null,
-                    'longitude'           => null,
-                    'raio'                => null,
-                    'logradouro'          => 'Rua ' . $faker->streetName(),
-                    'numero'              => (string) rand(1, 9999),
-                    'bairro'              => $bairro,
-                    'cidade'              => 'Umuarama',
-                    'estado'              => 'PR',
-                    'cep'                 => $cep,
-                    'complemento'         => rand(0, 1) ? 'Próx. à escola' : null,
-                    'tem_carteirinha'     => (bool) rand(0, 1),
+                    'latitude'             => null,
+                    'longitude'            => null,
+                    'raio'                 => null,
+                    'logradouro'           => 'Rua ' . $faker->streetName(),
+                    'numero'               => (string) rand(1, 9999),
+                    'bairro'               => $bairro,
+                    'cidade'               => 'Umuarama',
+                    'estado'               => 'PR',
+                    'cep'                  => $cep,
+                    'complemento'          => rand(0, 1) ? 'Próx. à escola' : null,
+                    'tem_carteirinha'      => !is_null($rotaId), // true se tiver rota, false se não
                 ]);
             }
         }

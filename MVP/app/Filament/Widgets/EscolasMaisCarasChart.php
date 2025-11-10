@@ -15,7 +15,7 @@ class EscolasMaisCarasChart extends ApexChartWidget
 
     protected function getOptions(): array
     {
-        [$labels, $data] = $this->resolverCategoriasEValores();
+        [$rotulos, $valores] = $this->resolverCategoriasEValores();
 
         return [
             'chart' => [
@@ -26,11 +26,11 @@ class EscolasMaisCarasChart extends ApexChartWidget
             'series' => [
                 [
                     'name' => 'Valor por Escola',
-                    'data' => $data,
+                    'data' => $valores,
                 ],
             ],
             'xaxis' => [
-                'categories' => $labels,
+                'categories' => $rotulos,
                 'labels' => [
                     'style' => ['fontFamily' => 'inherit'],
                 ],
@@ -53,57 +53,77 @@ class EscolasMaisCarasChart extends ApexChartWidget
 
     private function resolverCategoriasEValores(): array
     {
-        $rotas = Rota::with(['escolas:id,nome'])
+        // Rotas que têm pelo menos uma escola vinculada
+        $rotasComEscolas = Rota::with(['escolas:id,nome'])
             ->whereHas('escolas')
             ->get(['id', 'valor_total']);
 
-        $acum = [];
-        $nomes = [];
+        // [id_escola => valor_rateado_total]
+        $custoTotalPorEscola = [];
 
-        foreach ($rotas as $rota) {
-            $valor = (float) ($rota->valor_total ?? 0);
-            $ids = $rota->escolas->pluck('id')->all();
-            $names = $rota->escolas->pluck('nome', 'id')->all();
-            $nomes += $names;
+        // [id_escola => nome_escola]
+        $nomesEscolas = [];
 
-            $qtd = count($ids);
-            if ($qtd <= 0) {
+        foreach ($rotasComEscolas as $rota) {
+            $valorTotalRota = (float) ($rota->valor_total ?? 0);
+
+            $idsEscolasDaRota   = $rota->escolas->pluck('id')->all();
+            $nomesEscolasDaRota = $rota->escolas->pluck('nome', 'id')->all();
+
+            // Garante mapa de nomes
+            $nomesEscolas += $nomesEscolasDaRota;
+
+            $quantidadeEscolasNaRota = count($idsEscolasDaRota);
+
+            if ($quantidadeEscolasNaRota <= 0) {
                 continue;
             }
-            
-            $quota = $valor / $qtd;
-            foreach ($ids as $eid) {
-                $acum[$eid] = ($acum[$eid] ?? 0) + $quota;
+
+            // Rateia o valor total da rota entre as escolas atendidas
+            $custoRateadoPorEscola = $valorTotalRota / $quantidadeEscolasNaRota;
+
+            foreach ($idsEscolasDaRota as $idEscola) {
+                $custoTotalPorEscola[$idEscola] = ($custoTotalPorEscola[$idEscola] ?? 0) + $custoRateadoPorEscola;
             }
         }
 
-        $pares = [];
-        foreach ($acum as $eid => $tot) {
-            $pares[] = [
-                'name'  => (string) ($nomes[$eid] ?? "Escola #$eid"),
-                'value' => (float) $tot,
+        $dadosCustoEscolas = [];
+
+        foreach ($custoTotalPorEscola as $idEscola => $custoTotal) {
+            $dadosCustoEscolas[] = [
+                'nome'  => (string) ($nomesEscolas[$idEscola] ?? "Escola #{$idEscola}"),
+                'valor' => (float) $custoTotal,
             ];
         }
 
-        return $this->ordenarEFormatar($pares);
+        return $this->ordenarEFormatar($dadosCustoEscolas);
     }
 
-    private function ordenarEFormatar(array $pares): array
+    private function ordenarEFormatar(array $dadosCustoEscolas): array
     {
-        usort($pares, fn($a, $b) => $b['value'] <=> $a['value']);
-        $pares = array_slice($pares, 0, 10);
+        // Ordena da escola mais cara para a mais barata
+        usort(
+            $dadosCustoEscolas,
+            fn (array $escolaA, array $escolaB) =>
+                $escolaB['valor'] <=> $escolaA['valor']
+        );
 
-        $labels = [];
-        $data   = [];
-        foreach ($pares as $p) {
-            $labels[] = $p['name'] . ' — ' . $this->formatBRL($p['value']);
-            $data[]   = (float) number_format($p['value'], 2, '.');
+        // Limita para top 10
+        $dadosCustoEscolas = array_slice($dadosCustoEscolas, 0, 10);
+
+        $rotulos = [];
+        $valores = [];
+
+        foreach ($dadosCustoEscolas as $dadosEscola) {
+            $rotulos[] = $dadosEscola['nome'] . ' — ' . $this->formatarBRL($dadosEscola['valor']);
+            $valores[] = (float) number_format($dadosEscola['valor'], 2, '.', '');
         }
-        return [$labels, $data];
+
+        return [$rotulos, $valores];
     }
 
-    private function formatBRL(float $v): string
+    private function formatarBRL(float $valor): string
     {
-        return 'R$ ' . number_format($v, 2, ',', '.');
+        return 'R$ ' . number_format($valor, 2, ',', '.');
     }
 }

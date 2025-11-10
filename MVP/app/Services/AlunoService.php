@@ -10,6 +10,7 @@ use App\Models\Turma;
 use App\Models\Rota;
 use App\Filament\Resources\AlunoResource\Pages\ListAlunos;
 use Filament\Tables;
+use Filament\Forms;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
@@ -193,10 +194,12 @@ class AlunoService
                 ->label('Usa o Transporte?')
                 ->sortable()
                 ->inline(false)
+                ->visible(fn() => app(UserService::class)->ehAdmin())
                 ->onColor('success')
                 ->offColor('danger')
                 ->onIcon('heroicon-s-check')
-                ->offIcon('heroicon-s-x-mark'),
+                ->offIcon('heroicon-s-x-mark')
+                ->disabled(),
 
             Tables\Columns\TextColumn::make('nome')
                 ->label('Nome')
@@ -211,18 +214,25 @@ class AlunoService
                 ->label('Escola')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->toggleable(isToggledHiddenByDefault: false),
 
 
             Tables\Columns\TextColumn::make('turma.serie.nome')
                 ->label('Série')
                 ->sortable()
                 ->searchable()
-                ->toggleable(isToggledHiddenByDefault: true),
+                ->toggleable(isToggledHiddenByDefault: false),
 
 
             Tables\Columns\TextColumn::make('turma.turma')
                 ->label('Turma')
+                ->sortable()
+                ->searchable()
+                ->toggleable(isToggledHiddenByDefault: false),
+
+
+            Tables\Columns\TextColumn::make('rota.nome')
+                ->label('Rota')
                 ->sortable()
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
@@ -391,6 +401,46 @@ class AlunoService
                 ->color('info')
                 ->action(function (Aluno $record, $livewire) {
                     $livewire->dispatch('abrirDetalhesAluno', $record->id);
+                }),
+
+            Tables\Actions\Action::make('definirRotaTransporte')
+                ->label('Definir Rota')
+                ->icon('heroicon-o-map-pin')
+                ->modalHeading('Selecione a rota de transporte')
+                ->visible(function (Aluno $record) {
+
+                    if (app(UserService::class)->ehAdmin(Auth::user())) {
+                        if (!$record->tem_carteirinha && !$record->id_rota) {
+                            return true;
+                        }
+                    }
+                    return false;
+                })
+                ->form(function (Aluno $record) {
+                    return [
+                        Forms\Components\Select::make('id_rota')
+                            ->label('Rota de transporte')
+                            ->options(
+                                app(AlunoService::class)
+                                    ->opcoesDeRotasParaTurma($record->id_turma)
+                            )
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Lista apenas rotas vinculadas à escola da turma do aluno: ' . $record->nome),
+                    ];
+                })
+                ->action(function (array $data, Aluno $record) {
+                    $record->update([
+                        'id_rota'         => $data['id_rota'],
+                        'tem_carteirinha' => true,
+                    ]);
+
+                    Notification::make()
+                        ->title('Rota vinculada com sucesso')
+                        ->body("O aluno {$record->nome} foi vinculado à rota selecionada.")
+                        ->success()
+                        ->send();
                 }),
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make()

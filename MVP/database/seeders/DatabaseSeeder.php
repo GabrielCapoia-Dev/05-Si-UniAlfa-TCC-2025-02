@@ -190,8 +190,8 @@ class DatabaseSeeder extends Seeder
             EscolaSeeder::class,
             SecretariosPorEscolaSeeder::class,
             TurmaSeeder::class,
-            AlunoSeeder::class,
             RotasComPontosSeeder::class,
+            AlunoSeeder::class,
         ]);
     }
 }
