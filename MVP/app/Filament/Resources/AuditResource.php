@@ -3,7 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\AuditResource\Pages;
-use Filament\Forms\Components\DateTimePicker;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Rmsramos\Activitylog\Resources\ActivitylogResource;
@@ -14,11 +14,9 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity as ActivityModel;
 use Rmsramos\Activitylog\Models\Activity;
 
@@ -94,33 +92,24 @@ class AuditResource extends ActivitylogResource
         return null;
     }
 
-
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // ===================== RESUMO (topo) =====================
                 Split::make([
                     Section::make('Resumo')
                         ->schema([
                             Placeholder::make('causer_id')
                                 ->label('Usuário')
                                 ->content(function (?Model $record): string {
-
                                     return $record?->causer?->name ?? 'Sistema';
                                 }),
 
                             Placeholder::make('subject_type')
                                 ->label('Alvo')
                                 ->content(function (?Model $record): string {
-
-                                    if (! $record) return '-';
-
-                                    // tenta extrair nome amigável do alvo
+                                    if (!$record) return '-';
                                     $name = static::resolveSubjectName($record);
-
-
-                                    // por fim, monta "Nome (Tipo #ID)" ou só o nome se não houver ID/Tipo
                                     $type = $record->subject_type ? \Illuminate\Support\Str::of($record->subject_type)->afterLast('\\')->headline() : null;
                                     $id   = $record->subject_id;
 
@@ -128,11 +117,8 @@ class AuditResource extends ActivitylogResource
                                     if ($name && $type && !$id)  return "{$name} ({$type})";
                                     if ($name)                   return $name;
 
-
-                                    // último fallback (quase nunca cai aqui)
                                     return $type && $id ? "{$type} #{$id}" : ($type ?: '-');
                                 }),
-
 
                             Textarea::make('description')
                                 ->label('Descrição')
@@ -149,15 +135,11 @@ class AuditResource extends ActivitylogResource
 
                             Placeholder::make('event')
                                 ->label('Ação')
-                                ->content(function (?Model $record): string {
-
-                                    return $record?->event ? ucfirst($record->event) : '-';
-                                }),
+                                ->content(fn(?Model $record): string => $record?->event ? ucfirst($record->event) : '-'),
 
                             Placeholder::make('created_at')
                                 ->label('Quando')
                                 ->content(function (?Model $record): string {
-
                                     return $record?->created_at
                                         ? $record->created_at->format(config('filament-activitylog.datetime_format', 'd/m/Y H:i:s'))
                                         : '-';
@@ -170,20 +152,18 @@ class AuditResource extends ActivitylogResource
                     ->visible(fn($record) => $record->properties?->count() > 0)
                     ->schema(function (?Model $record) {
                         /** @var Activity&ActivityModel $record */
-                        $properties = $record->properties->except(['attributes', 'old']);
-
                         $schema = [];
 
                         if ($old = $record->properties->get('old')) {
                             $schema[] = KeyValue::make('old')
                                 ->formatStateUsing(fn() => self::formatDateValues($old))
-                                ->label(__('activitylog::forms.fields.old.label'));
+                                ->label('activitylog::forms.fields.old.label');
                         }
 
                         if ($attributes = $record->properties->get('attributes')) {
                             $schema[] = KeyValue::make('attributes')
                                 ->formatStateUsing(fn() => self::formatDateValues($attributes))
-                                ->label(__('activitylog::forms.fields.attributes.label'));
+                                ->label('activitylog::forms.fields.attributes.label');
                         }
 
                         return $schema;
@@ -191,10 +171,6 @@ class AuditResource extends ActivitylogResource
             ])->columns(1);
     }
 
-    /**
-     * Helper opcional — formata datas encontrado valores DateTime/Carbon em arrays/strings.
-     * Se você já possui esse helper na classe, pode remover este aqui.
-     */
     protected static function formatDateValues($data)
     {
         if (is_array($data)) {
@@ -237,8 +213,6 @@ class AuditResource extends ActivitylogResource
                     ->label('Ação')
                     ->getStateUsing(function (ActivityModel $record) {
                         $props = $record->properties;
-
-                        // properties pode ser Collection, array ou string JSON — normalizamos:
                         if (is_string($props)) {
                             try {
                                 $props = json_decode($props, true, 512, JSON_THROW_ON_ERROR);
@@ -247,13 +221,12 @@ class AuditResource extends ActivitylogResource
                             }
                         } elseif ($props instanceof \Illuminate\Support\Collection) {
                             $props = $props->toArray();
-                        } elseif (! is_array($props)) {
-                            $props = (array) $props;
+                        } elseif (!is_array($props)) {
+                            $props = (array)$props;
                         }
 
                         $perm = data_get($props, 'policy_permission');
-
-                        return $perm ?: (ucfirst((string) $record->event) ?: '-');
+                        return $perm ?: (ucfirst((string)$record->event) ?: '-');
                     })
                     ->searchable()
                     ->sortable(),
@@ -280,7 +253,6 @@ class AuditResource extends ActivitylogResource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-
                 SelectFilter::make('model')
                     ->label('Modelo')
                     ->options(fn() => static::modelFilterOptions())
@@ -291,8 +263,8 @@ class AuditResource extends ActivitylogResource
                         $vals = $data['values'] ?? [];
                         if (empty($vals)) return $query;
 
-                        $includeNull = in_array('__null__', $vals, true);
-                        $types = array_values(array_filter($vals, fn($v) => $v !== '__null__'));
+                        $includeNull = in_array('_null_', $vals, true);
+                        $types = array_values(array_filter($vals, fn($v) => $v !== '_null_'));
 
                         return $query->where(function ($q) use ($types, $includeNull) {
                             if (!empty($types)) {
@@ -307,53 +279,50 @@ class AuditResource extends ActivitylogResource
                 SelectFilter::make('event')
                     ->label('Ação')
                     ->options([
-                        'created'  => 'Created',
-                        'updated'  => 'Updated',
-                        'deleted'  => 'Deleted',
+                        'created' => 'Created',
+                        'updated' => 'Updated',
+                        'deleted' => 'Deleted',
                     ])
                     ->multiple(),
             ])
             ->actions([
                 ViewAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                FilamentExportBulkAction::make('exportar_filtrados')
+                    ->label('Exportar XLSX')
+                    ->defaultFormat('xlsx')
+                    ->directDownload(),
+            ]);
     }
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     protected static function modelFilterOptions(): array
     {
-        // Coleta os tipos distintos presentes nos logs
         $rows = ActivityModel::query()
             ->select('subject_type')
             ->distinct()
             ->pluck('subject_type')
-            ->filter(); // remove null/empty
+            ->filter();
 
-        // Mapeia FQCN -> Label (basename ‘bonito’)
         $options = [];
         foreach ($rows as $fqcn) {
             $label = \Illuminate\Support\Str::of(class_basename($fqcn))
-                ->headline() // “Turma”, “Escola”, “Dominio Email”, etc.
+                ->headline()
                 ->value();
             $options[$fqcn] = $label;
         }
 
-        // Ordena alfabeticamente
         asort($options);
 
-        // Acrescenta uma opção para logs sem subject (ex.: eventos do sistema)
-        // chave especial "__null__"
-        $options = ['__null__' => 'Sem alvo'] + $options;
+        $options = ['_null_' => 'Sem alvo'] + $options;
 
         return $options;
     }
-
 
     public static function getPages(): array
     {
