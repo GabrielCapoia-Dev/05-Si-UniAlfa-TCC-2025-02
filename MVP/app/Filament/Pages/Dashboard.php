@@ -18,8 +18,8 @@ class Dashboard extends BaseDashboard
     protected static ?string $pluralModelLabel = 'Painel de Controle';
     protected static ?string $modelLabel = 'Painel de Controle';
     protected static string $view = 'filament.pages.dashboard';
-    protected static ?string $navigationGroup = "Acesso";
-    protected static ?int $navigationSort = 3;
+    protected static ?string $navigationGroup = "Administrativo";
+    protected static ?int $navigationSort = 1;
 
 
     public static function canAccess(): bool

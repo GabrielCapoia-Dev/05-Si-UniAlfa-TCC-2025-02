@@ -396,13 +396,6 @@ class AlunoService
     private function acoesTabela(): array
     {
         return [
-            Tables\Actions\Action::make('visualizar')
-                ->label('Ver Detalhes')
-                ->icon('heroicon-m-eye')
-                ->color('info')
-                ->action(function (Aluno $record, $livewire) {
-                    $livewire->dispatch('abrirDetalhesAluno', $record->id);
-                }),
 
             Tables\Actions\Action::make('definirRotaTransporte')
                 ->label('Definir Rota')
@@ -444,6 +437,15 @@ class AlunoService
                         ->success()
                         ->send();
                 }),
+                
+            Tables\Actions\Action::make('visualizar')
+                ->label('Ver Detalhes')
+                ->icon('heroicon-m-eye')
+                ->color('info')
+                ->action(function (Aluno $record, $livewire) {
+                    $livewire->dispatch('abrirDetalhesAluno', $record->id);
+                }),
+
             Tables\Actions\EditAction::make(),
             Tables\Actions\DeleteAction::make()
                 ->before(function ($record, Tables\Actions\DeleteAction $action) {

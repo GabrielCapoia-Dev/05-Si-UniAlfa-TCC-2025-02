@@ -5,7 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Support\Facades\DB;
 use Spatie\SimpleExcel\SimpleExcelWriter;
@@ -13,9 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Escola extends Model
 {
-    use HasFactory;
-    use Notifiable;
-    use LogsActivity;
+    use HasFactory, Notifiable, LogsActivity;
 
     protected $table = 'escolas';
 
@@ -31,12 +31,28 @@ class Escola extends Model
         'estado',
         'cep',
         'numero',
-        'complemento'
+        'complemento',
     ];
+
+    /** ====== LOGS (Spatie) ====== */
+
+    /** Mapa de permissões específicas deste model */
+    protected function permissionMap(): array
+    {
+        return [
+            'viewAny' => 'Listar Escolas',
+            'view'    => 'Listar Escolas',
+            'create'  => 'Criar Escolas',
+            'update'  => 'Editar Escolas',
+            'delete'  => 'Excluir Escolas',
+            'restore' => 'Restaurar Escolas',
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
+            ->useLogName('escolas')
             ->logOnly([
                 'nome',
                 'tipo',
@@ -48,8 +64,75 @@ class Escola extends Model
                 'cidade',
                 'estado',
                 'cep',
-            ]);
+                'numero',
+                'complemento',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->dontLogIfAttributesChangedOnly(['updated_at'])
+            ->setDescriptionForEvent(fn(string $event) => $this->buildDescription($event));
     }
+
+    public function tapActivity(Activity $activity, string $eventName): void
+    {
+        $ability = [
+            'created'  => 'create',
+            'updated'  => 'update',
+            'deleted'  => 'delete',
+            'restored' => 'restore',
+        ][$eventName] ?? 'update';
+
+        $perm = $this->permissionMap()[$ability] ?? null;
+
+        // normaliza properties em array
+        $props = $activity->properties ?? [];
+        if ($props instanceof \Illuminate\Support\Collection) {
+            $props = $props->toArray();
+        } elseif (is_string($props)) {
+            try {
+                $props = json_decode($props, true, 512, JSON_THROW_ON_ERROR) ?: [];
+            } catch (\Throwable) {
+                $props = [];
+            }
+        } elseif (! is_array($props)) {
+            $props = (array) $props;
+        }
+
+        // merge metadados úteis
+        $activity->properties = collect($props)->merge([
+            'ability'             => $ability,
+            'policy_permission'   => $perm,
+            'user_has_permission' => $perm && Auth::user() ? Auth::user()->hasPermissionTo($perm) : null,
+            'ip'                  => app()->runningInConsole() ? null : request()?->ip(),
+            'user_agent'          => app()->runningInConsole() ? null : request()?->userAgent(),
+            'when'                => now()->toDateTimeString(),
+        ]);
+
+        if ($u = Auth::user()) {
+            $activity->causedBy($u);
+        }
+    }
+
+    protected function buildDescription(string $event): string
+    {
+        $ability = [
+            'created'  => 'create',
+            'updated'  => 'update',
+            'deleted'  => 'delete',
+            'restored' => 'restore',
+        ][$event] ?? 'update';
+
+        $permTxt = $this->permissionMap()[$ability] ?? 'sem permissão identificada';
+        $usuario = Auth::user()->name ?? 'Sistema';
+        $alvo    = $this->nome ?? "Escola #{$this->getKey()}";
+        $quando  = now()->format('Y-m-d H:i:s');
+
+        return "Usuário {$usuario}, com permissão para {$permTxt}, "
+            . "realizou {$ability} na escola {$alvo}. "
+            . "Operação em {$quando}.";
+    }
+
+    /** ====== Relações ====== */
 
     public function turmas()
     {
@@ -66,13 +149,7 @@ class Escola extends Model
         return $this->belongsToMany(Rota::class, 'escola_rota', 'escola_id', 'rota_id');
     }
 
-
-
-
-
-
-
-
+    /** ====== (seu código existente) ====== */
 
     private static function inferFieldFromMessage(string $msg): ?string
     {
@@ -88,7 +165,6 @@ class Escola extends Model
         return null;
     }
 
-
     private static function categorizeMessage(string $msg): string
     {
         $m = mb_strtolower($msg, 'UTF-8');
@@ -97,8 +173,6 @@ class Escola extends Model
         if (preg_match('/formato|inv[aá]lido|regex|tamanho|size/u', $m)) return 'invalid';
         return 'invalid';
     }
-
-
 
     public function validateGoogleSheet(string $fileId): void
     {
@@ -140,16 +214,16 @@ class Escola extends Model
         ];
 
         $attributes = [
-            'Nome' => 'nome',
-            'Logradouro' => 'logradouro',
-            'Bairro' => 'bairro',
-            'Cidade' => 'cidade',
-            'Estado' => 'estado',
-            'CEP' => 'cep',
-            'Numero' => 'número',
-            'Número' => 'número',
+            'Nome'        => 'nome',
+            'Logradouro'  => 'logradouro',
+            'Bairro'      => 'bairro',
+            'Cidade'      => 'cidade',
+            'Estado'      => 'estado',
+            'CEP'         => 'cep',
+            'Numero'      => 'número',
+            'Número'      => 'número',
             'Complemento' => 'complemento',
-            'Tipo' => 'tipo',
+            'Tipo'        => 'tipo',
         ];
 
         $validate = $svc->validateRows($rows, $rules, $attributes);
@@ -181,11 +255,8 @@ class Escola extends Model
                 $parts[] = "{$prefix} possui " . implode(', ', $desc) . '.';
             }
 
-            throw new \RuntimeException(
-                implode("\n", $parts)
-            );
+            throw new \RuntimeException(implode("\n", $parts));
         }
-
 
         $mapHeaderToDb = function (array $r) {
             $numero = $r['Numero'] ?? $r['Número'] ?? null;

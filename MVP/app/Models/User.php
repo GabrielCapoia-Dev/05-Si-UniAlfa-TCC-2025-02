@@ -11,23 +11,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory;
-    use Notifiable;
-    use HasRoles;
-    use LogsActivity;
+    use HasFactory, Notifiable, HasRoles, LogsActivity;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'id_escola',
         'name',
@@ -45,21 +38,144 @@ class User extends Authenticatable implements FilamentUser
     protected $hidden = [
         'password',
         'remember_token',
+        'google_token',
+        'google_refresh_token',
     ];
 
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'       => 'datetime',
+            'password'                => 'hashed',
             'google_token_expires_in' => 'datetime',
+            'email_approved'          => 'boolean', // mantém como boolean no model
+        ];
+    }
+
+    protected function permissionMap(): array
+    {
+        return [
+            'viewAny' => 'Listar Usuários',
+            'view'    => 'Listar Usuários',
+            'create'  => 'Criar Usuários',
+            'update'  => 'Editar Usuários',
+            'delete'  => 'Excluir Usuários',
+            'restore' => 'Restaurar Usuários',
         ];
     }
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['id_escola', 'name', 'email', 'email_verified_at', 'email_approved']);
+            ->useLogName('usuarios')
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->dontLogIfAttributesChangedOnly(['updated_at'])
+            ->logExcept([
+                'google_token',
+                'google_refresh_token',
+                'google_token_expires_in',
+                'remember_token',
+                'updated_at',
+                'password',
+            ])
+            ->setDescriptionForEvent(fn(string $event) => $this->buildDescription($event));
+    }
+
+    public function tapActivity(\Spatie\Activitylog\Models\Activity $activity, string $eventName): void
+    {
+        // 1) ability & perm do model User
+        $abilityMap = ['created' => 'create', 'updated' => 'update', 'deleted' => 'delete', 'restored' => 'restore'];
+        $ability    = $abilityMap[$eventName] ?? 'update';
+
+        $permMap = [
+            'create'  => 'Criar Usuários',
+            'update'  => 'Editar Usuários',
+            'delete'  => 'Excluir Usuários',
+            'restore' => 'Restaurar Usuários',
+            'view'    => 'Listar Usuários',
+            'viewAny' => 'Listar Usuários',
+        ];
+        $permLabel = $permMap[$ability] ?? null;
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $hasPerm = null;
+        if ($user && $permLabel) {
+            try {
+                $hasPerm = $user->hasPermissionTo($permLabel);
+            } catch (\Throwable) {
+                $hasPerm = null;
+            }
+        }
+
+        // 2) normaliza properties -> array
+        $props = $activity->properties;
+        if ($props instanceof \Illuminate\Support\Collection) {
+            $props = $props->toArray();
+        } elseif (is_object($props) && method_exists($props, 'toArray')) {
+            $props = $props->toArray();
+        } elseif (is_string($props)) {
+            try {
+                $props = json_decode($props, true, 512, JSON_THROW_ON_ERROR) ?: [];
+            } catch (\Throwable) {
+                $props = [];
+            }
+        } elseif (! is_array($props)) {
+            $props = (array) $props;
+        }
+
+        // 3) traduz email_approved nos diffs
+        $toBool = static function ($v): ?bool {
+            if (is_bool($v)) return $v;
+            if (is_int($v))  return $v === 1;
+            if (is_float($v)) return (int)$v === 1;
+            if ($v === null) return null;
+            $s = trim(mb_strtolower((string) $v, 'UTF-8'));
+            if (in_array($s, ['1', 'true', 'on', 'yes', 'sim', 'y', 't'], true))  return true;
+            if (in_array($s, ['0', 'false', 'off', 'no', 'não', 'nao', 'n', 'f', ''], true)) return false;
+            return filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        };
+        $toLabel = static fn(?bool $b): ?string => $b === null ? null : ($b ? 'Aprovado' : 'Não Aprovado');
+
+        foreach (['old', 'attributes'] as $bag) {
+            if (isset($props[$bag]) && is_array($props[$bag]) && array_key_exists('email_approved', $props[$bag])) {
+                $b = $toBool($props[$bag]['email_approved']);
+                if ($b !== null) {
+                    $props[$bag]['email_approved'] = $toLabel($b);
+                }
+            }
+        }
+
+        // 4) grava metadados de permissão
+        $props['ability']             = $ability;
+        if ($permLabel !== null) {
+            $props['policy_permission']   = $permLabel;
+            $props['user_has_permission'] = $hasPerm;
+        }
+
+        // 5) reatribui e vincula usuário
+        $activity->properties = $props;
+        if ($user) $activity->causedBy($user);
+    }
+    
+    protected function buildDescription(string $event): string
+    {
+        $ability = ['created' => 'create', 'updated' => 'update', 'deleted' => 'delete', 'restored' => 'restore'][$event] ?? 'update';
+        $perm    = $this->permissionMap()[$ability] ?? null;
+
+        $usuario = Auth::user()->name ?? 'Sistema';
+        $alvo    = $this->name ?? "#{$this->getKey()}";
+        $quando  = now()->format('Y-m-d H:i:s');
+        $permTxt = $perm ?: 'sem permissão identificada';
+
+        return "Usuário {$usuario}, com permissão para {$permTxt}, realizou {$ability} no usuário {$alvo}. Operação em {$quando}.";
+    }
+
+    public function getDisplayName(): string
+    {
+        $email = $this->email ?? $this->google_email ?? null;
+        return $email ? "{$this->name} <{$email}>" : ($this->name ?? "Usuário #{$this->getKey()}");
     }
 
     public function canAccessPanel(Panel $panel, ?bool $register = false): bool
@@ -86,7 +202,6 @@ class User extends Authenticatable implements FilamentUser
                 ->send();
         }
 
-        // Redireciona para o login do painel correto (Symfony RedirectResponse)
         $loginRouteName = "filament.{$panel->getId()}.auth.login";
         $loginUrl = route($loginRouteName);
 
@@ -100,7 +215,6 @@ class User extends Authenticatable implements FilamentUser
 
     protected static function booted()
     {
-
         parent::booted();
 
         static::updating(function ($user) {

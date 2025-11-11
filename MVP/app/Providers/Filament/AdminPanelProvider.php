@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Resources\AuditResource;
 use App\Http\Controllers\ExportModeloController;
 use App\Http\Controllers\CarteirinhaPrintController;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -85,6 +86,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentApexChartsPlugin::make(),
 
                 ActivitylogPlugin::make()
+                    ->resource(AuditResource::class)
                     ->label('Registro de Atividade')
                     ->pluralLabel('Registro de Atividades')
                     ->navigationGroup('Administrativo')
