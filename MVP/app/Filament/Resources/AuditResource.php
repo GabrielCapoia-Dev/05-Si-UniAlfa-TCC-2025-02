@@ -217,7 +217,7 @@ class AuditResource extends ActivitylogResource
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Quando')
-                    ->dateTime('d/m/Y H:i:s')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
 
                 TextColumn::make('causer_display')
@@ -275,6 +275,7 @@ class AuditResource extends ActivitylogResource
                     ->limit(120)
                     ->wrap()
                     ->tooltip(fn($state) => $state)
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable(),
             ])
             ->defaultSort('created_at', 'desc')
