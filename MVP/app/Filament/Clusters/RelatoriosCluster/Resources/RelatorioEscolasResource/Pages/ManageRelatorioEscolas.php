@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource\Pages;
+namespace App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource\Pages;
 
-use App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource;
-use App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource\Widgets\RelatorioEscolasChart;
+use App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource;
+use App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource\Widgets\RelatorioEscolasChart;
 use Filament\Resources\Pages\ManageRecords;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;

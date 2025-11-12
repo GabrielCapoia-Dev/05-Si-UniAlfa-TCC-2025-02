@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Clusters\RetorioCluster\Resources;
+namespace App\Filament\Clusters\RelatoriosCluster\Resources;
 
 use App\Filament\Clusters\RelatoriosCluster;
-use App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource\Pages;
-use App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource\RelationManagers;
+use App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource\Pages;
+use App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource\RelationManagers;
 use App\Models\Escola;
 use App\Services\RelatorioService;
 use Filament\Forms;

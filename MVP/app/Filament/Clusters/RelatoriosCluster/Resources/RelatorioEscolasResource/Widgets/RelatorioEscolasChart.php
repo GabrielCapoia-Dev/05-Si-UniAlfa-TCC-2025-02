@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Clusters\RetorioCluster\Resources\RelatorioEscolasResource\Widgets;
+namespace App\Filament\Clusters\RelatoriosCluster\Resources\RelatorioEscolasResource\Widgets;
 
 use Illuminate\Support\Facades\DB;
 use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
