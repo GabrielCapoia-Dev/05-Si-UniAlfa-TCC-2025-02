@@ -14,11 +14,10 @@ class ListRotas extends ListRecords
     protected static string $resource = RotaResource::class;
     protected static string $view = 'components.layouts.list-rotas';
 
-    // estado do painel
     public ?Rota $rotaSelecionada = null;
-    public array $rotaPontos = [];   // pontos ordenados p/ o mapa
-    public array $rotaEscolas = [];  // escolas (nome/id)
-    public array $stats = [];        // contadores diversos
+    public array $rotaPontos = [];
+    public array $rotaEscolas = [];
+    public array $stats = [];
 
     protected $listeners = ['abrirDetalhesRota'];
 

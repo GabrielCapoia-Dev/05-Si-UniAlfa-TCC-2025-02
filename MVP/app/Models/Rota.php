@@ -38,6 +38,15 @@ class Rota extends Model
         'valor_total'     => 'float',
     ];
 
+        public const PERMISSIONS = [
+        'viewAny' => 'Listar Rotas',
+        'view'    => 'Listar Rotas',
+        'create'  => 'Criar Rotas',
+        'update'  => 'Editar Rotas',
+        'delete'  => 'Excluir Rotas',
+        'restore' => 'Restaurar Rotas',
+    ];
+    
     /** ===== Permissões deste model (ajuste conforme Policy) ===== */
     protected function permissionMap(): array
     {
