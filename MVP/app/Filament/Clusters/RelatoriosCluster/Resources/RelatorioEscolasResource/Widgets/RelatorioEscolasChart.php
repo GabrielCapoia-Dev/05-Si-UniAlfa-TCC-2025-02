@@ -76,9 +76,26 @@ class RelatorioEscolasChart extends ApexChartWidget
 
     private function dadosDoGrafico(): array
     {
+        // Subquery: total de alunos por rota
+        $alunosTotal = DB::table('alunos')
+            ->select('id_rota', DB::raw('COUNT(*) AS total_alunos_rota'))
+            ->groupBy('id_rota');
+
+        // Subquery: alunos por (rota, escola) via turma
+        $alunosPorEscola = DB::table('alunos AS a')
+            ->join('turmas AS t', 't.id', '=', 'a.id_turma')
+            ->select('a.id_rota', 't.id_escola AS escola_id', DB::raw('COUNT(*) AS alunos_na_escola'))
+            ->groupBy('a.id_rota', 't.id_escola');
+
+        // Agregado proporcional por escola (com filtros opcionais de turno e de ids)
         $q = DB::table('escolas')
-            ->leftJoin('escola_rota as er', 'er.escola_id', '=', 'escolas.id')
+            ->leftJoin('escola_rota AS er', 'er.escola_id', '=', 'escolas.id')
             ->leftJoin('rotas', 'rotas.id', '=', 'er.rota_id')
+            ->leftJoinSub($alunosTotal, 'at', 'at.id_rota', '=', 'er.rota_id')
+            ->leftJoinSub($alunosPorEscola, 'ae', function ($join) {
+                $join->on('ae.id_rota', '=', 'er.rota_id')
+                    ->on('ae.escola_id', '=', 'er.escola_id');
+            })
             ->when($this->idsFiltradas !== [], fn($qq) => $qq->whereIn('escolas.id', $this->idsFiltradas))
             ->when($this->turno, fn($qq) => $qq->where('rotas.turno', $this->turno))
             ->groupBy('escolas.id', 'escolas.nome')
@@ -86,15 +103,17 @@ class RelatorioEscolasChart extends ApexChartWidget
                 'escolas.id',
                 'escolas.nome',
                 DB::raw("
-                    COALESCE(SUM(
-                        rotas.valor_total / NULLIF(
-                            (SELECT COUNT(*) FROM escola_rota er2 WHERE er2.rota_id = er.rota_id),
-                            0
+                COALESCE(
+                    SUM(
+                        rotas.valor_total * (
+                            COALESCE(ae.alunos_na_escola, 0)
+                            / NULLIF(COALESCE(at.total_alunos_rota, 0), 0)
                         )
-                    ), 0) as valor_rateado
-                "),
+                    ), 0
+                ) AS custo_total_escola
+            "),
             ])
-            ->orderByDesc('valor_rateado')
+            ->orderByDesc('custo_total_escola')
             ->limit(10)
             ->get();
 
@@ -103,7 +122,8 @@ class RelatorioEscolasChart extends ApexChartWidget
 
         foreach ($q as $row) {
             $rotulos[] = (string) $row->nome;
-            $valores[] = (float) number_format((float) $row->valor_rateado, 2, '.', '');
+            // usa ponto como separador para apex (já mandamos número mesmo)
+            $valores[] = (float) number_format((float) $row->custo_total_escola, 2, '.', '');
         }
 
         return [$rotulos, $valores];
