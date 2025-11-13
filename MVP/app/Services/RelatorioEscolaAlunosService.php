@@ -6,6 +6,7 @@ use App\Models\Escola;
 use App\Models\User;
 use Filament\Tables;
 use Filament\Tables\Table;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +20,7 @@ class RelatorioEscolaAlunosService
     public function configurarTabela(Table $table, ?User $user): Table
     {
         return $table
-            ->query(fn () => $this->findEscolasData())
+            ->query(fn() => $this->findEscolasData())
             ->modifyQueryUsing(function (Builder $query) {
                 $turno = data_get(request()->all(), 'tableFilters.rotas.turno.value');
 
@@ -41,9 +42,9 @@ class RelatorioEscolaAlunosService
                     ->leftJoinSub($alunosTotal, 'at', 'at.id_rota', '=', 'er.rota_id')
                     ->leftJoinSub($alunosPorEscola, 'ae', function ($join) {
                         $join->on('ae.id_rota', '=', 'er.rota_id')
-                             ->on('ae.escola_id', '=', 'er.escola_id');
+                            ->on('ae.escola_id', '=', 'er.escola_id');
                     })
-                    ->when($turno, fn ($q) => $q->where('rotas.turno', $turno))
+                    ->when($turno, fn($q) => $q->where('rotas.turno', $turno))
                     ->groupBy('er.escola_id')
                     ->select([
                         'er.escola_id',
@@ -62,10 +63,32 @@ class RelatorioEscolaAlunosService
                     ->orderByDesc('agg.custo_total_escola');
             })
             ->persistSortInSession(false)
+            ->bulkActions($this->acoesEmMassa($user))
             ->paginated([10, 25, 50, 100])
             ->columns($this->colunas())
             ->filters($this->filtros())
             ->striped();
+    }
+
+    private function acoesEmMassa(?User $user): array
+    {
+        return [
+            FilamentExportBulkAction::make('exportar_xlsx')
+                ->label('Exportar XLSX')
+                ->defaultFormat('xlsx')
+                ->formatStates([
+                    'tem_carteirinha' => fn($record) => $record->tem_carteirinha ? 'Sim' : 'Não',
+                ])
+                ->directDownload(),
+            FilamentExportBulkAction::make('exportar_pdf')
+                ->label('Exportar PDF')
+                ->defaultFormat('pdf')
+                ->color('danger')
+                ->formatStates([
+                    'tem_carteirinha' => fn($record) => $record->tem_carteirinha ? 'Sim' : 'Não',
+                ])
+                ->directDownload(),
+        ];
     }
 
     private function colunas(): array
@@ -77,20 +100,20 @@ class RelatorioEscolaAlunosService
 
             Tables\Columns\TextColumn::make('alunos_atendidos')
                 ->label('Alunos Atendidos')
-                ->state(fn ($record) => (int) ($record->alunos_atendidos ?? 0))
+                ->state(fn($record) => (int) ($record->alunos_atendidos ?? 0))
                 ->numeric()
                 ->alignRight(),
 
             Tables\Columns\TextColumn::make('custo_total_escola')
                 ->label('Custo Total (Escola)')
-                ->state(fn ($record) => (float) ($record->custo_total_escola ?? 0))
-                ->formatStateUsing(static fn (mixed $state): string => 'R$ ' . number_format((float) $state, 2, ',', '.'))
+                ->state(fn($record) => (float) ($record->custo_total_escola ?? 0))
+                ->formatStateUsing(static fn(mixed $state): string => 'R$ ' . number_format((float) $state, 2, ',', '.'))
                 ->alignRight(),
 
             Tables\Columns\TextColumn::make('custo_por_aluno')
                 ->label('Custo por Aluno')
-                ->state(fn ($record) => (float) ($record->custo_por_aluno ?? 0))
-                ->formatStateUsing(static fn (mixed $state): string => 'R$ ' . number_format((float) $state, 2, ',', '.'))
+                ->state(fn($record) => (float) ($record->custo_por_aluno ?? 0))
+                ->formatStateUsing(static fn(mixed $state): string => 'R$ ' . number_format((float) $state, 2, ',', '.'))
                 ->alignRight(),
         ];
     }
@@ -109,7 +132,7 @@ class RelatorioEscolaAlunosService
                     $turno = is_array($data) ? ($data['value'] ?? null) : ($data ?: null);
                     if (! $turno) return;
 
-                    $query->whereHas('rotas', fn ($q) => $q->where('turno', $turno));
+                    $query->whereHas('rotas', fn($q) => $q->where('turno', $turno));
                 })
                 ->indicateUsing(function ($state) {
                     $turno = is_array($state) ? ($state['value'] ?? null) : ($state ?: null);

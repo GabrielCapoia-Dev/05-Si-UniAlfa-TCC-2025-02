@@ -122,7 +122,6 @@ class RelatorioEscolasChart extends ApexChartWidget
 
         foreach ($q as $row) {
             $rotulos[] = (string) $row->nome;
-            // usa ponto como separador para apex (já mandamos número mesmo)
             $valores[] = (float) number_format((float) $row->custo_total_escola, 2, '.', '');
         }
 

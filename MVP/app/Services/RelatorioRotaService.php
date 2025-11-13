@@ -14,7 +14,6 @@ class RelatorioRotaService
     /** Query base para Rotas */
     public function findRotasData(): Builder
     {
-        // Nada de escolas aqui — só os campos da rota
         return Rota::query();
     }
 
@@ -30,9 +29,9 @@ class RelatorioRotaService
                 $query
                     ->when($turno, fn($q) => $q->where('turno', $turno))
                     ->reorder()                 // zera ordenações prévias
-                    ->orderByDesc('valor_total'); // SEMPRE maior → menor
+                    ->orderByDesc('valor_total'); // maior → menor
             })
-            ->persistSortInSession(false) // impede sort antigo sobrescrever
+            ->persistSortInSession(false)
             ->paginated([10, 25, 50, 100])
             ->columns($this->colunasTabelaRotas())
             ->bulkActions($this->acoesEmMassaRotas($user))
@@ -45,7 +44,7 @@ class RelatorioRotaService
         return [
             Tables\Columns\TextColumn::make('nome')
                 ->label('Rota')
-                ->searchable(),  // sem ->sortable() para não permitir mudar a ordem
+                ->searchable(),
 
             Tables\Columns\TextColumn::make('turno')
                 ->label('Turno'),
