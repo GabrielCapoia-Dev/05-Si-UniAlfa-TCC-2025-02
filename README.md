@@ -15,7 +15,6 @@ O sistema GeoBus foi projetado para atender a diversos perfis de usuários (admi
 *   **Gestão de Rotas e Otimização:** Cadastro, edição e visualização de rotas de transporte, permitindo a otimização do percurso para maior eficiência.
 *   **Controle de Alunos Transportados:** Cadastro e gerenciamento centralizado dos dados dos alunos que utilizam o transporte escolar.
 *   **Emissão de Carteirinhas:** Geração e controle de carteirinhas de transporte para certificação e identificação segura dos alunos.
-*   **Gestão de Frota e Motoristas:** Administração dos veículos e dos motoristas responsáveis pelas rotas.
 *   **Controle de Acesso:** Sistema de perfis que garante que cada usuário tenha acesso apenas às funcionalidades pertinentes às suas funções.
 
 ## 🛠️ Tecnologias Utilizadas
