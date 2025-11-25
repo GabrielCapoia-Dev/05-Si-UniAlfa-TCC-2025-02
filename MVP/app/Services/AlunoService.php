@@ -700,6 +700,7 @@ class AlunoService
                         ->where('tem_carteirinha', false)
                         ->exists();
                 })
+                ->visible(fn() => app(UserService::class)->ehAdmin(Auth::user()))
                 ->requiresConfirmation()
                 ->modalHeading('Abrir pagina para impressão?')
                 ->action(function (Collection $records, ListAlunos $livewire) {
