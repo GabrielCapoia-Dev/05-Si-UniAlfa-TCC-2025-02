@@ -170,15 +170,38 @@ class TurmaService
         return $form->schema($this->schemaFormulario($user));
     }
 
-    public function criarTurma(array $data): Turma
+    public function criarTurma(array $data): ?Turma
     {
         /** @var \App\Models\User */
         $user = Auth::user();
+
         if (!$user) {
-            throw new \Exception("Usuário não autenticado.");
+            Notification::make()
+                ->title('Erro')
+                ->body('Usuário não autenticado.')
+                ->danger()
+                ->send();
+            return null;
         }
 
-        if ($user->hasPermissionTo('Criar Turmas') || !empty($user->id_escola)) {
+        if ($user->hasRole('Admin')) {
+            if (!isset($data['id_escola'])) {
+                Notification::make()
+                    ->title('Erro')
+                    ->body('Administrador deve informar a escola.')
+                    ->danger()
+                    ->send();
+                return null;
+            }
+        } else {
+            if (empty($user->id_escola)) {
+                Notification::make()
+                    ->title('Erro')
+                    ->body('Usuário não tem uma escola associada.')
+                    ->danger()
+                    ->send();
+                return null;
+            }
             $data['id_escola'] = $user->id_escola;
         }
 
@@ -186,6 +209,7 @@ class TurmaService
 
         return $turma;
     }
+
     //** Schema do FOrm */
     private function schemaFormulario($user): array
     {
