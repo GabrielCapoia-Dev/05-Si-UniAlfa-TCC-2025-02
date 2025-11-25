@@ -309,7 +309,6 @@ class UserService
             ->bulkActions($this->acoesEmMassa($user))
             ->defaultSort('updated_at', 'desc')
             ->striped();
-
     }
 
     protected function colunasTabela(): array
@@ -331,7 +330,11 @@ class UserService
 
             Tables\Columns\TextColumn::make('email')
                 ->label('E-mail')
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->wrap()
+
                 ->searchable(),
 
             Tables\Columns\ToggleColumn::make('email_approved')

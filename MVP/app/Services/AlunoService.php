@@ -204,10 +204,16 @@ class AlunoService
             Tables\Columns\TextColumn::make('nome')
                 ->label('Nome')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable(),
             Tables\Columns\TextColumn::make('cgm')
                 ->label('CGM')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable(),
 
             Tables\Columns\TextColumn::make('turma.escola.nome')
@@ -247,12 +253,18 @@ class AlunoService
             Tables\Columns\TextColumn::make('nome_responsavel')
                 ->label('Nome Responsavel')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
             Tables\Columns\TextColumn::make('telefone_responsavel')
                 ->label('Telefone Responsável')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
@@ -264,6 +276,9 @@ class AlunoService
             Tables\Columns\TextColumn::make('telefone_aluno')
                 ->label('Telefone Aluno')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
@@ -276,6 +291,9 @@ class AlunoService
                 ->label('Telefone')
                 ->sortable()
                 ->searchable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->icon('heroicon-o-phone')
                 ->getStateUsing(function ($record) {
                     $telefone = $record->telefone_alternativo;
@@ -286,6 +304,9 @@ class AlunoService
             Tables\Columns\TextColumn::make('logradouro')
                 ->label('Logradouro')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
@@ -304,6 +325,9 @@ class AlunoService
             Tables\Columns\TextColumn::make('numero')
                 ->label('Número')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
@@ -316,6 +340,9 @@ class AlunoService
             Tables\Columns\TextColumn::make('cep')
                 ->label('CEP')
                 ->sortable()
+                ->copyable()
+                ->copyMessage('Copiado!')
+                ->copyMessageDuration(1500)
                 ->searchable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
@@ -437,7 +464,7 @@ class AlunoService
                         ->success()
                         ->send();
                 }),
-                
+
             Tables\Actions\Action::make('visualizar')
                 ->label('Ver Detalhes')
                 ->icon('heroicon-m-eye')
@@ -489,7 +516,7 @@ class AlunoService
     {
         return [
             Tables\Actions\DeleteBulkAction::make()
-                ->visible(function(){
+                ->visible(function () {
                     /** @var \App\Models\User */
                     $user = Auth::user();
 
