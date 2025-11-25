@@ -127,6 +127,16 @@ class TurmaService
     {
         return [
             Tables\Actions\DeleteBulkAction::make()
+                ->visible(function(){
+                    /** @var \App\Models\User */
+                    $user = Auth::user();
+
+                    if ($user?->hasPermissionTo('Excluir Turma')) {
+                        return true;
+                    }
+
+                    return false;
+                })
                 ->before(function ($records, $action) {
 
                     foreach ($records as $record) {

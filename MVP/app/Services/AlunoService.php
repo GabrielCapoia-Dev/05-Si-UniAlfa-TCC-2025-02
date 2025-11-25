@@ -488,7 +488,17 @@ class AlunoService
     private function acoesEmMassa(?User $user): array
     {
         return [
-            Tables\Actions\DeleteBulkAction::make(),
+            Tables\Actions\DeleteBulkAction::make()
+                ->visible(function(){
+                    /** @var \App\Models\User */
+                    $user = Auth::user();
+
+                    if ($user?->hasPermissionTo('Excluir Turma')) {
+                        return true;
+                    }
+
+                    return false;
+                }),
 
             FilamentExportBulkAction::make('exportar_filtrados')
                 ->label('Exportar XLSX')
