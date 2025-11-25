@@ -78,12 +78,13 @@ class DominioEmail extends Model
                 $props[$bag]['status'] = $toLabel($props[$bag]['status']);
             }
         }
-
+        /** @var \App\Models\User */
+        $user = Auth::user();
         // merge final
         $activity->properties = collect($props)->merge([
             'ability'             => $ability,
             'policy_permission'   => $perm,
-            'user_has_permission' => $perm && Auth::user() ? Auth::user()->hasPermissionTo($perm) : null,
+            'user_has_permission' => $perm && $user ?  $user->hasPermissionTo($perm) : null,
             'ip'                  => app()->runningInConsole() ? null : request()?->ip(),
             'user_agent'          => app()->runningInConsole() ? null : request()?->userAgent(),
             'when'                => now()->toDateTimeString(),

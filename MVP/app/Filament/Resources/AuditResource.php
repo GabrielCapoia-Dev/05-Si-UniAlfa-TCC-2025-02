@@ -157,13 +157,13 @@ class AuditResource extends ActivitylogResource
                         if ($old = $record->properties->get('old')) {
                             $schema[] = KeyValue::make('old')
                                 ->formatStateUsing(fn() => self::formatDateValues($old))
-                                ->label('activitylog::forms.fields.old.label');
+                                ->label('Antes');
                         }
 
                         if ($attributes = $record->properties->get('attributes')) {
                             $schema[] = KeyValue::make('attributes')
                                 ->formatStateUsing(fn() => self::formatDateValues($attributes))
-                                ->label('activitylog::forms.fields.attributes.label');
+                                ->label('Depois');
                         }
 
                         return $schema;
