@@ -27,12 +27,11 @@ class DominioEmail extends Model
     protected function permissionMap(): array
     {
         return [
-            'viewAny' => 'Listar Domínios de Email',
-            'view'    => 'Listar Domínios de Email',
-            'create'  => 'Criar Domínios de Email',
-            'update'  => 'Editar Domínios de Email',
+            'viewAny' => 'Listar Dominios de Email',
+            'view'    => 'Listar Dominios de Email',
+            'create'  => 'Criar Dominios de Email',
+            'update'  => 'Editar Dominios de Email',
             'delete'  => 'Excluir Dominios de Email',
-            'restore' => 'Restaurar Domínios de Email',
         ];
     }
 
