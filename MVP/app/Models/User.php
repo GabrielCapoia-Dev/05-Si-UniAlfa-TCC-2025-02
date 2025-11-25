@@ -178,14 +178,16 @@ class User extends Authenticatable implements FilamentUser
         return $email ? "{$this->name} <{$email}>" : ($this->name ?? "Usuário #{$this->getKey()}");
     }
 
+    // Só pode acessar o painel se o email estiver aprovado
     public function canAccessPanel(Panel $panel, ?bool $register = false): bool
     {
         if ($this->email_approved == true) {
             return true;
         }
-
+        //Força logout se não estiver aprovado
         Filament::auth()->logout();
 
+        // Verifica se quem esta tentando acessar o painel esta vindo de um registro
         if ($register) {
             Notification::make()
                 ->title('Cadastro Realizado')

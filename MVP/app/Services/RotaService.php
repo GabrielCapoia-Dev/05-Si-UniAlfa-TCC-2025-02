@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Filament\Tables;
 use Filament\Tables\Table;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use App\Forms\Components\Mapa;
 use Filament\Forms;
@@ -223,6 +224,11 @@ class RotaService
                         }
                     }
                 }),
+
+            FilamentExportBulkAction::make('exportar_filtrados')
+                ->label('Exportar XLSX')
+                ->defaultFormat('xlsx')
+                ->directDownload(),
         ];
     }
 
