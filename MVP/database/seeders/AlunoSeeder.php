@@ -4,10 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Aluno;
 use App\Models\Turma;
-use App\Models\Rota;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Faker\Factory as Faker;
 
 class AlunoSeeder extends Seeder
@@ -15,6 +14,9 @@ class AlunoSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create('pt_BR');
+
+        // Carrega as fotos ORIGINAIS (fontes) em public/images/alunos
+        $sourcePhotos = $this->carregarFotosOriginais();
 
         // 15 primeiros nomes (mistos)
         $primeiros = [
@@ -101,14 +103,14 @@ class AlunoSeeder extends Seeder
             'Parque Bonfim',
             'Porto Belo',
             'Dom Bosco',
-            'Tropical'
+            'Tropical',
         ];
 
         // Para garantir CGM único global
         $cgmsUsados = Aluno::pluck('cgm')->all();
         $cgmsIndex  = array_flip($cgmsUsados);
 
-        // Carrega todas as turmas com suas séries e escola
+        // Carrega todas as turmas com suas séries e escola + rotas
         $turmas = Turma::with(['serie', 'escola.rotas'])->get();
 
         foreach ($turmas as $turma) {
@@ -125,33 +127,37 @@ class AlunoSeeder extends Seeder
                 $dataNasc  = $faker->dateTimeBetween("-{$idadeAlvo['max']} years", "-{$idadeAlvo['min']} years")
                     ->format('Y-m-d');
 
-                $cep = sprintf('875%02d%03d', rand(0, 99), rand(0, 999)); // 8 dígitos, sem hífen
+                $cep    = sprintf('875%02d%03d', rand(0, 99), rand(0, 999)); // 8 dígitos, sem hífen
                 $bairro = Arr::random($bairros);
 
-                $cgm = $this->gerarCGMUnico($cgmsIndex); // sempre único
+                // CGM sempre único
+                $cgm = $this->gerarCGMUnico($cgmsIndex);
 
                 // Telefones (DDD 44)
-                $telResp = $this->telefoneMovel();
+                $telResp  = $this->telefoneMovel();
                 $telAluno = rand(0, 1) ? $this->telefoneMovel() : null;
                 $telAlt   = rand(0, 1) ? $this->telefoneFixo()  : null;
 
                 // Definir rota (80% dos alunos têm rota, 20% ficam sem)
                 $temRota = rand(1, 100) <= 80;
-                $rotaId = null;
+                $rotaId  = null;
 
                 if ($temRota && $rotasDisponiveis->isNotEmpty()) {
                     // Seleciona uma rota aleatória da escola
                     $rotaId = $rotasDisponiveis->random()->id;
                 }
 
+                // Gera cópia da foto para este aluno (storage/app/public/alunos/CGM.ext)
+                $foto = $this->gerarFotoParaAluno($cgm, $sourcePhotos);
+
                 Aluno::create([
                     'id_turma'             => $turma->id,
-                    'id_rota'              => $rotaId, // Associado com rota da escola (80% chance)
+                    'id_rota'              => $rotaId,
                     'nome'                 => $nome,
                     'data_nascimento'      => $dataNasc,
                     'cgm'                  => $cgm,
                     'sexo'                 => $sexo,
-                    'foto'                 => null,
+                    'foto'                 => $foto, // ex.: 'alunos/12345678.png' ou null
                     'nome_responsavel'     => $this->nomeResponsavel($primeiros, $sobrenomes),
                     'telefone_responsavel' => $telResp,
                     'telefone_aluno'       => $telAluno,
@@ -166,9 +172,71 @@ class AlunoSeeder extends Seeder
                     'estado'               => 'PR',
                     'cep'                  => $cep,
                     'complemento'          => rand(0, 1) ? 'Próx. à escola' : null,
-                    'tem_carteirinha'      => !is_null($rotaId), // true se tiver rota, false se não
+                    'tem_carteirinha'      => ! is_null($rotaId),
                 ]);
             }
+        }
+    }
+
+    /**
+     * Carrega a lista de arquivos ORIGINAIS em public/images/alunos.
+     *
+     * @return array lista de paths absolutos dos arquivos de origem
+     */
+    private function carregarFotosOriginais(): array
+    {
+        $dir = public_path('images/alunos');
+
+        if (! is_dir($dir)) {
+            return [];
+        }
+
+        $extensoes = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        $files     = [];
+
+        foreach ($extensoes as $ext) {
+            $glob = glob($dir . '/*.' . $ext) ?: [];
+            foreach ($glob as $fullPath) {
+                if (is_file($fullPath)) {
+                    $files[] = $fullPath;
+                }
+            }
+        }
+
+        return $files;
+    }
+
+    /**
+     * Cria uma cópia da foto para o aluno, com nome baseado no CGM,
+     * em storage/app/public/alunos/CGM.ext e retorna o caminho relativo
+     * que vai para o campo "foto" (ex.: "alunos/12345678.png").
+     */
+    private function gerarFotoParaAluno(string $cgm, array $sourcePhotos): ?string
+    {
+        if (empty($sourcePhotos)) {
+            return null;
+        }
+
+        // Escolhe uma foto de origem aleatória
+        $sourceFullPath = Arr::random($sourcePhotos);
+
+        // Descobre extensão e monta caminho de destino
+        $ext = strtolower(pathinfo($sourceFullPath, PATHINFO_EXTENSION)) ?: 'jpg';
+        $relativePath = 'alunos/' . $cgm . '.' . $ext; // caminho relativo no disco 'public'
+
+        try {
+            $contents = file_get_contents($sourceFullPath);
+            if ($contents === false) {
+                return null;
+            }
+
+            // Salva em storage/app/public/alunos/CGM.ext
+            Storage::disk('public')->put($relativePath, $contents);
+
+            return $relativePath;
+        } catch (\Throwable $e) {
+            // Se der erro de leitura/escrita, simplesmente não seta foto
+            return null;
         }
     }
 
@@ -182,22 +250,26 @@ class AlunoSeeder extends Seeder
 
         if ($sexo === 'Masculino') {
             $candidatos = ['João', 'Gabriel', 'Pedro', 'Lucas', 'Miguel', 'Guilherme', 'Matheus', 'Rafael', 'Felipe'];
-            $primeiro = Arr::random(array_merge($candidatos, $primeiros));
+            $primeiro   = Arr::random(array_merge($candidatos, $primeiros));
         } else {
             $candidatas = ['Maria', 'Ana', 'Luiza', 'Julia', 'Mariana', 'Beatriz'];
-            $primeiro = Arr::random(array_merge($candidatas, $primeiros));
+            $primeiro   = Arr::random(array_merge($candidatas, $primeiros));
         }
 
         $temMeio = (bool) rand(0, 1);
-        $meio = $temMeio ? Arr::random($meios) : null;
+        $meio    = $temMeio ? Arr::random($meios) : null;
 
         $sob1 = Arr::random($sobrenomes);
         $sob2 = rand(0, 1) ? Arr::random($sobrenomes) : null;
 
         $partes = [$primeiro];
-        if ($meio)  $partes[] = $meio;
-        $partes[]   = $sob1;
-        if ($sob2 && $sob2 !== $sob1) $partes[] = $sob2;
+        if ($meio) {
+            $partes[] = $meio;
+        }
+        $partes[] = $sob1;
+        if ($sob2 && $sob2 !== $sob1) {
+            $partes[] = $sob2;
+        }
 
         $nomeCompleto = implode(' ', $partes);
 
@@ -254,7 +326,7 @@ class AlunoSeeder extends Seeder
     }
 
     /**
-     * Telefone fixo (DDD 44, 10 ou 11 dígitos – aqui 10).
+     * Telefone fixo (DDD 44, 10 dígitos – aqui 10).
      */
     private function telefoneFixo(): string
     {
@@ -266,7 +338,7 @@ class AlunoSeeder extends Seeder
      */
     private function nomeResponsavel(array $primeiros, array $sobrenomes): string
     {
-        $p = Arr::random($primeiros);
+        $p  = Arr::random($primeiros);
         $s1 = Arr::random($sobrenomes);
         $s2 = rand(0, 1) ? Arr::random($sobrenomes) : null;
 
