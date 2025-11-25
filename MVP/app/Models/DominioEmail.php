@@ -20,7 +20,7 @@ class DominioEmail extends Model
     protected $fillable = [
         'dominio_email',
         'setor',
-        'status', // 0/1, false/true, 'ativo'/'inativo'… (ver mapeamento abaixo)
+        'status'
     ];
 
     /** Mapa de permissões para este model */

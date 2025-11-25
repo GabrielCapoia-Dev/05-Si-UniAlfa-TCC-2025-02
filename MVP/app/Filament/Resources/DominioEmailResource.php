@@ -56,7 +56,7 @@ class DominioEmailResource extends Resource
                     ->helperText('Digite o dominio sem o @, exemplo: dominio.com.br')
                     ->placeholder('dominio.com.br'),
 
-                TextInput::make('nome')
+                TextInput::make('setor')
                     ->label('Nome:')
                     ->required()
                     ->minLength(3)
