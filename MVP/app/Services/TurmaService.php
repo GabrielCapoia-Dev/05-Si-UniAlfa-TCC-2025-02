@@ -131,7 +131,7 @@ class TurmaService
                     /** @var \App\Models\User */
                     $user = Auth::user();
 
-                    if ($user?->hasPermissionTo('Excluir Turma')) {
+                    if ($user?->hasPermissionTo('Excluir Turmas')) {
                         return true;
                     }
 

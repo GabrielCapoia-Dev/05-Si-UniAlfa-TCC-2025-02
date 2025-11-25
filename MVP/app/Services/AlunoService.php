@@ -493,7 +493,7 @@ class AlunoService
                     /** @var \App\Models\User */
                     $user = Auth::user();
 
-                    if ($user?->hasPermissionTo('Excluir Turma')) {
+                    if ($user?->hasPermissionTo('Excluir Alunos')) {
                         return true;
                     }
 

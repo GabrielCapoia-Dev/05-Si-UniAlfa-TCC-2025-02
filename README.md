@@ -1,4 +1,4 @@
-# 🚌 GeoBus: Sistema de Gerenciamento do Transporte Escolar
+"# 🚌 GeoBus: Sistema de Gerenciamento do Transporte Escolar
 
 Este repositório contém o código-fonte do **GeoBus**, um sistema desenvolvido como Trabalho de Conclusão de Curso (TCC) com o objetivo de modernizar e otimizar a gestão do transporte escolar no município de Umuarama.
 
@@ -14,8 +14,8 @@ O sistema GeoBus foi projetado para atender a diversos perfis de usuários (admi
 
 *   **Gestão de Rotas e Otimização:** Cadastro, edição e visualização de rotas de transporte, permitindo a otimização do percurso para maior eficiência.
 *   **Controle de Alunos Transportados:** Cadastro e gerenciamento centralizado dos dados dos alunos que utilizam o transporte escolar.
-*   **Emissão de Carteirinhas:** Geração e controle de carteirinhas de transporte para certificação e identificação segura dos alunos.
-*   **Controle de Acesso:** Sistema de perfis que garante que cada usuário tenha acesso apenas às funcionalidades pertinentes às suas funções.
+*   **Emissão de Carteirinhas:** Geração" e controle de carteirinhas de transporte para certificação e identificação segura dos alunos.
+*   **Controle de Acesso:** Sistema de perfis que garante que c"ada usuário tenha acesso apenas às funcionalidades pertinentes às suas funções.
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -34,7 +34,7 @@ Para configurar e rodar o projeto GeoBus em seu ambiente local, siga o guia deta
 **[Guia Completo de Instalação e Configuração (Notion)](https://www.notion.so/TCC-GeoBus-fbffab4dc0cc4f90b62ab3128a1e09f6)**
 
 O guia inclui os passos necessários para:
-1.  Clonar o repositório.
+1.  Clonar o repositório."
 2.  Configurar o ambiente PHP e Composer.
 3.  Configurar o banco de dados.
 4.  Configurar as chaves de API do Google Cloud Console.
