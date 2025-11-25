@@ -5,6 +5,7 @@ use Filament\Tables\Table;
 use Filament\Tables;
 use App\Models\User;
 use App\Models\Escola;
+use App\Models\Turma;
 use App\Models\Serie;
 use Illuminate\Support\Facades\Auth;
 use App\Services\UserService;
@@ -169,6 +170,22 @@ class TurmaService
         return $form->schema($this->schemaFormulario($user));
     }
 
+    public function criarTurma(array $data): Turma
+    {
+        /** @var \App\Models\User */
+        $user = Auth::user();
+        if (!$user) {
+            throw new \Exception("Usuário não autenticado.");
+        }
+
+        if ($user->hasPermissionTo('Criar Turmas') || !empty($user->id_escola)) {
+            $data['id_escola'] = $user->id_escola;
+        }
+
+        $turma = Turma::create($data);
+
+        return $turma;
+    }
     //** Schema do FOrm */
     private function schemaFormulario($user): array
     {
@@ -179,9 +196,9 @@ class TurmaService
                 ->required()
                 ->preload()
                 ->searchable()
-                ->default(fn() => Auth::user()?->id_escola)
-                ->dehydrated(true)
-                ->disabled(fn() => app(UserService::class)->ehAdmin(Auth::user()) ? false : true),
+                ->default(fn() => $user?->id_escola)
+                ->disabled(fn() => !app(UserService::class)->ehAdmin($user)), 
+
 
             Forms\Components\Select::make('id_serie')
                 ->label('Série')
@@ -236,17 +253,24 @@ class TurmaService
 
         return $query;
     }
-  public function forcarVinculoComEscola(array $data, User $auth): array
+    public function forcarVinculoComEscola(array $data, User $auth): array
     {
+        // Verifica se o usuário tem uma escola associada
+        if (empty($auth->id_escola)) {
+            throw new \Exception("O usuário não tem uma escola associada.");
+        }
 
-        $admin = app(UserService::class)->ehAdmin($auth);
-
-        if ($admin && !empty($auth->id_escola)) {
+        // Se o campo 'id_escola' não estiver no array de dados, adiciona o valor
+        if (!isset($data['id_escola'])) {
             $data['id_escola'] = $auth->id_escola;
         }
 
         return $data;
     }
+
+
+
+
 
     public function acoesDoCabecalhoDaPagina(): array
     {
@@ -254,8 +278,25 @@ class TurmaService
         $hasSeries = Serie::exists();
 
         if ($hasEscolas && $hasSeries) {
-            return [
-                Actions\CreateAction::make(),
+           return [
+                Actions\CreateAction::make()
+                    ->action(function ($data) {
+                        try {
+                            $turmaService = app(TurmaService::class);
+                            $turma = $turmaService->criarTurma($data);
+
+                            return Notification::make()
+                                ->title('Turma criada com sucesso')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Erro ao criar turma')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ];
         }
 

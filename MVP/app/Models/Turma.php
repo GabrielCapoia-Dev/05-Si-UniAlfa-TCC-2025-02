@@ -19,7 +19,7 @@ class Turma extends Model
     protected $fillable = [
         'id_serie',
         'id_escola',
-        'turma',   // letra (ex.: A, B...)
+        'turma',
         'turno',
     ];
 
