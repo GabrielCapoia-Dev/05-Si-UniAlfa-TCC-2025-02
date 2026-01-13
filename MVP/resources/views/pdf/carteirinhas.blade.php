@@ -10,6 +10,10 @@
         :root {
             --margem-pagina: 8mm;
             --altura-card: 68mm;
+            --cor-primaria: #1e40af;
+            --cor-secundaria: #f5d20b;
+            --cor-destaque: #ffffff;
+            --cor-acento: #ef4444;
         }
 
         @page {
@@ -49,7 +53,7 @@
         .btn {
             appearance: none;
             border: 1px solid #d1d5db;
-            background: #111827;
+            background: var(--cor-primaria);
             color: #fff;
             border-radius: .5rem;
             padding: .5rem .9rem;
@@ -139,7 +143,6 @@
         .conteudo-esquerdo {
             display: grid;
             grid-template-columns: 27mm 1fr;
-            /* coluna fixa para foto, resto para dados */
             column-gap: 2.5mm;
             align-items: start;
         }
@@ -162,14 +165,15 @@
         }
 
         .carteira-badge {
-            background: #ffd200;
-            color: #000;
+            background: var(--cor-primaria);
+            color: #fff;
             font-size: 7pt;
             font-weight: bold;
             padding: 0.8mm 1.5mm;
             display: inline-block;
             margin-bottom: 1.5mm;
             line-height: 1.2;
+            border-radius: 2px;
         }
 
         .foto-container {
@@ -181,15 +185,18 @@
             width: 25mm;
             height: 30mm;
             object-fit: cover;
-            border: 1px solid #999;
+            border: 2px solid var(--cor-primaria);
+            border-radius: 3px;
         }
 
         .linha-info {
-            background: #ffd200;
+            background: var(--cor-secundaria);
+            color: #000000;
             padding: 0.8mm 1.5mm;
             margin: 1.5mm 0;
             font-size: 9pt;
             font-weight: bold;
+            border-radius: 2px;
         }
 
         .dados-aluno {
@@ -203,7 +210,11 @@
 
         .lbl {
             font-weight: bold;
-            font-size: 9pt
+            font-size: 9pt;
+        }
+
+        .lbl span {
+            color: var(--cor-primaria);
         }
 
         /* LADO DIREITO (VERSO) */
@@ -220,14 +231,15 @@
         }
 
         .carteira-badge-direita {
-            background: #ffd200;
-            color: #000;
+            background: var(--cor-primaria);
+            color: #fff;
             font-size: 7pt;
             font-weight: bold;
             padding: 0.8mm 1.5mm;
             margin-bottom: 1.5mm;
             line-height: 1.2;
             text-align: right;
+            border-radius: 2px;
         }
 
         .logo-direita {
@@ -258,10 +270,18 @@
             font-size: 6.5pt;
             line-height: 1.5;
             margin-bottom: 2mm;
+            background: #f3f4f6;
+            padding: 2mm;
+            border-radius: 3px;
+            border-left: 3px solid var(--cor-secundaria);
         }
 
         .dados-responsavel div {
             margin-bottom: 1mm;
+        }
+
+        .dados-responsavel .lbl span {
+            color: var(--cor-secundaria);
         }
 
         /* Faixa colorida na parte inferior */
@@ -279,29 +299,28 @@
         }
 
         .fx.b1 {
-            background: #0a5ab0;
-            width: 30%;
+            background: var(--cor-primaria);
+            width: 35%;
         }
 
         .fx.b2 {
-            background: #ffd200;
-            width: 10%;
+            background: var(--cor-secundaria);
+            width: 15%;
         }
 
         .fx.b3 {
-            background: #ffffff;
-            width: 10%;
-            border-top: 1px solid #ccc;
+            background: var(--cor-destaque);
+            width: 15%;
         }
 
         .fx.b4 {
-            background: #e31e24;
+            background: var(--cor-acento);
             width: 10%;
         }
 
         .fx.b5 {
-            background: #0a5ab0;
-            width: 40%;
+            background: var(--cor-primaria);
+            width: 25%;
         }
 
         /* Ícone de tesoura */
@@ -337,19 +356,16 @@
                                 </div>
 
                                 <div class="carteira-badge">
-                                    CARTEIRA DE TRANSPORTE ESCOLAR - {{ $template->ano ?? now()->year }}
+                                    CARTEIRA DE TRANSPORTE ESCOLAR - 2026
                                 </div>
 
-                                <!-- NOVO: foto | dados lado a lado -->
                                 <div class="conteudo-esquerdo">
-                                    <!-- Coluna da foto -->
                                     <div class="col-foto">
                                         <div class="foto-container">
                                             <img class="foto" src="{{ $aluno->foto_web_url }}" alt="Foto do aluno">
                                         </div>
                                     </div>
 
-                                    <!-- Coluna dos dados -->
                                     <div class="col-dados">
                                         <div class="linha-info">
                                             <span>Linha:</span> {{ $aluno->rota?->nome ?? '-' }}
@@ -379,7 +395,7 @@
                             <div class="lado lado-direito">
                                 <div class="topo-direito">
                                     <div class="carteira-badge-direita">
-                                        CARTEIRA DE TRANSPORTE ESCOLAR - {{ $template->ano ?? now()->year }}
+                                        CARTEIRA DE TRANSPORTE ESCOLAR - 2026
                                     </div>
 
                                     <div class="logo-direita">
@@ -397,7 +413,6 @@
                                     <div class="lbl">
                                         <span>Bairro:</span> {{ $aluno->bairro ?? '-' }}
                                     </div>
-
                                 </div>
 
                                 <div class="faixa">
