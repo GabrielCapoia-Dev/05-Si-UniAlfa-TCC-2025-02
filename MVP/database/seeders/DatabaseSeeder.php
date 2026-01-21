@@ -182,12 +182,12 @@ class DatabaseSeeder extends Seeder
             Serie::firstOrCreate(['nome' => $seriesName]);
         }
 
-        $this->call([
-            EscolaSeeder::class,
-            SecretariosPorEscolaSeeder::class,
-            TurmaSeeder::class,
-            RotasComPontosSeeder::class,
-            AlunoSeeder::class,
-        ]);
+        // $this->call([
+        //     EscolaSeeder::class,
+        //     SecretariosPorEscolaSeeder::class,
+        //     TurmaSeeder::class,
+        //     RotasComPontosSeeder::class,
+        //     AlunoSeeder::class,
+        // ]);
     }
 }

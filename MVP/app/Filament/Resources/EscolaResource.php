@@ -118,7 +118,7 @@ class EscolaResource extends Resource
                                     ->required()
                                     ->minLength(3)
                                     ->maxLength(255)
-                                    ->rule('regex:/^[\p{L}]+$/u')
+                                    ->rule('regex:/^\p{L}+(?:\s\p{L}+)*$/u')
                                     ->validationMessages([
                                         'regex' => 'Use apenas letras, sem caracteres especiais.',
                                     ])
