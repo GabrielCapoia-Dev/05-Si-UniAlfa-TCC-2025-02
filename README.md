@@ -1,4 +1,4 @@
-"# 🚌 GeoBus: Sistema de Gerenciamento do Transporte Escolar
+# 🚌 GeoBus: Sistema de Gerenciamento do Transporte Escolar
 
 Este repositório contém o código-fonte do **GeoBus**, um sistema desenvolvido como Trabalho de Conclusão de Curso (TCC) com o objetivo de modernizar e otimizar a gestão do transporte escolar no município de Umuarama.
 
